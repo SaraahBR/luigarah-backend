@@ -75,3 +75,8 @@ wallet.zip
 *.tmp
 *.swp
 *.old
+
+# ============================
+# Spring profiles locais
+# ============================
+/src/main/resources/application-local.properties

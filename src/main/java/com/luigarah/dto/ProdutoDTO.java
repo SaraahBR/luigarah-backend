@@ -7,6 +7,17 @@ import com.fasterxml.jackson.annotation.JsonRawValue;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * DTO de Produto para entrada/saída na API.
+ *
+ * ⚠️ Sanitização via setters:
+ * - URL (imagem / imagemHover): cleanUrl()
+ * - imagens (JSON em String com array de URLs): cleanUrlArrayJson()
+ * - Demais Strings: cleanText()
+ *
+ * Motivo: alguns dados chegam com '\n' e muitos espaços antes da aspa final da URL,
+ * quebrando o carregamento no front. Os setters garantem o formato correto.
+ */
 @Schema(description = "DTO para transferência de dados de produto")
 public class ProdutoDTO {
 
@@ -83,58 +94,94 @@ public class ProdutoDTO {
 
     public ProdutoDTO(String titulo, String subtitulo, String autor, String descricao,
                       BigDecimal preco, String dimensao, String imagem, String categoria) {
-        this.titulo = titulo;
-        this.subtitulo = subtitulo;
-        this.autor = autor;
-        this.descricao = descricao;
-        this.preco = preco;
-        this.dimensao = dimensao;
-        this.imagem = imagem;
-        this.categoria = categoria;
+        // usa setters para garantir limpeza
+        setTitulo(titulo);
+        setSubtitulo(subtitulo);
+        setAutor(autor);
+        setDescricao(descricao);
+        setPreco(preco);
+        setDimensao(dimensao);
+        setImagem(imagem);
+        setCategoria(categoria);
     }
 
+    // =========================
+    // Helpers de sanitização
+    // =========================
+
+    /** Remove CR/LF e espaços nas pontas; preserva espaços internos. */
+    private static String cleanText(String raw) {
+        if (raw == null) return null;
+        String s = raw.replace("\r", "").replace("\n", "").trim();
+        return s;
+    }
+
+    /** URL não pode ter whitespace; remove CR/LF, poda e tira \\s+ em qualquer posição. */
+    private static String cleanUrl(String raw) {
+        if (raw == null) return null;
+        String s = cleanText(raw);
+        return s.replaceAll("\\s+", "");
+    }
+
+    /**
+     * Limpa JSON de array de URLs em String:
+     * - remove CR/LF
+     * - trim
+     * - remove espaços imediatamente antes/ depois das aspas dos itens
+     */
+    private static String cleanUrlArrayJson(String raw) {
+        if (raw == null) return null;
+        String s = raw.replace("\r", "").replace("\n", "").trim();
+        s = s.replaceAll("\\s+\"", "\""); // ...jpg[espaços]"
+        s = s.replaceAll("\"\\s+", "\""); // "[espaços]https://...
+        return s;
+    }
+
+    // =========================
     // Getters e Setters
+    // =========================
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
     public String getTitulo() { return titulo; }
-    public void setTitulo(String titulo) { this.titulo = titulo; }
+    public void setTitulo(String titulo) { this.titulo = cleanText(titulo); }
 
     public String getSubtitulo() { return subtitulo; }
-    public void setSubtitulo(String subtitulo) { this.subtitulo = subtitulo; }
+    public void setSubtitulo(String subtitulo) { this.subtitulo = cleanText(subtitulo); }
 
     public String getAutor() { return autor; }
-    public void setAutor(String autor) { this.autor = autor; }
+    public void setAutor(String autor) { this.autor = cleanText(autor); }
 
     public String getDescricao() { return descricao; }
-    public void setDescricao(String descricao) { this.descricao = descricao; }
+    public void setDescricao(String descricao) { this.descricao = cleanText(descricao); }
 
     public BigDecimal getPreco() { return preco; }
     public void setPreco(BigDecimal preco) { this.preco = preco; }
 
     public String getDimensao() { return dimensao; }
-    public void setDimensao(String dimensao) { this.dimensao = dimensao; }
+    public void setDimensao(String dimensao) { this.dimensao = cleanText(dimensao); }
 
     public String getImagem() { return imagem; }
-    public void setImagem(String imagem) { this.imagem = imagem; }
+    public void setImagem(String imagem) { this.imagem = cleanUrl(imagem); }
 
     public String getImagemHover() { return imagemHover; }
-    public void setImagemHover(String imagemHover) { this.imagemHover = imagemHover; }
+    public void setImagemHover(String imagemHover) { this.imagemHover = cleanUrl(imagemHover); }
 
     public String getImagens() { return imagens; }
-    public void setImagens(String imagens) { this.imagens = imagens; }
+    public void setImagens(String imagens) { this.imagens = cleanUrlArrayJson(imagens); }
 
     public String getComposicao() { return composicao; }
-    public void setComposicao(String composicao) { this.composicao = composicao; }
+    public void setComposicao(String composicao) { this.composicao = cleanText(composicao); }
 
     public String getDestaques() { return destaques; }
-    public void setDestaques(String destaques) { this.destaques = destaques; }
+    public void setDestaques(String destaques) { this.destaques = cleanText(destaques); }
 
     public String getCategoria() { return categoria; }
-    public void setCategoria(String categoria) { this.categoria = categoria; }
+    public void setCategoria(String categoria) { this.categoria = cleanText(categoria); }
 
     public String getModelo() { return modelo; }
-    public void setModelo(String modelo) { this.modelo = modelo; }
+    public void setModelo(String modelo) { this.modelo = cleanText(modelo); }
 
     public LocalDateTime getDataCriacao() { return dataCriacao; }
     public void setDataCriacao(LocalDateTime dataCriacao) { this.dataCriacao = dataCriacao; }
