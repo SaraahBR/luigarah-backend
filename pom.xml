@@ -28,7 +28,7 @@
     </properties>
 
     <dependencies>
-        <!-- Web + JSON (Jackson incluso) -->
+        <!-- Web + JSON -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -46,7 +46,7 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
-        <!-- Flyway core + suporte Oracle -->
+        <!-- Flyway + Oracle -->
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
@@ -56,14 +56,14 @@
             <artifactId>flyway-database-oracle</artifactId>
         </dependency>
 
-        <!-- Driver Oracle (Java 11+) -->
+        <!-- Oracle JDBC -->
         <dependency>
             <groupId>com.oracle.database.jdbc</groupId>
             <artifactId>ojdbc11</artifactId>
             <version>23.2.0.0</version>
         </dependency>
 
-        <!-- mTLS / Wallet (TCPS) -->
+        <!-- Wallet TCPS -->
         <dependency>
             <groupId>com.oracle.database.security</groupId>
             <artifactId>oraclepki</artifactId>
@@ -111,7 +111,30 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+
         <plugins>
+            <!-- Corrige charset e evita filtering em .sql, .ora, .jks, .json -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <configuration>
+                    <encoding>UTF-8</encoding>
+                    <nonFilteredFileExtensions>
+                        <nonFilteredFileExtension>sql</nonFilteredFileExtension>
+                        <nonFilteredFileExtension>ora</nonFilteredFileExtension>
+                        <nonFilteredFileExtension>jks</nonFilteredFileExtension>
+                        <nonFilteredFileExtension>json</nonFilteredFileExtension>
+                    </nonFilteredFileExtensions>
+                </configuration>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

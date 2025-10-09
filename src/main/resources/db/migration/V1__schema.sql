@@ -1,4 +1,4 @@
-ALTER SESSION SET CURRENT_SCHEMA = APP_LUIGARAH;
+﻿ALTER SESSION SET CURRENT_SCHEMA = APP_LUIGARAH;
 
 --------------------------
 -- Tabelas
@@ -98,7 +98,7 @@ END IF;
 END;
 /
 
--- Validação de etiquetas por categoria
+-- ValidaÃ§Ã£o de etiquetas por categoria
 CREATE OR REPLACE TRIGGER tamanhos_valida_etiqueta
 BEFORE INSERT OR UPDATE ON tamanhos
                             FOR EACH ROW
@@ -106,7 +106,7 @@ DECLARE v_num NUMBER;
 BEGIN
   IF :NEW.categoria = 'roupas' THEN
     IF :NEW.etiqueta NOT IN ('XXXS','XXS','XS','S','M','L','XL') THEN
-      RAISE_APPLICATION_ERROR(-20001,'Etiqueta inválida para roupas.');
+      RAISE_APPLICATION_ERROR(-20001,'Etiqueta invÃ¡lida para roupas.');
 END IF;
   ELSIF :NEW.categoria = 'sapatos' THEN
 SELECT CASE WHEN REGEXP_LIKE(:NEW.etiqueta,'^\d+$') THEN 1 ELSE 0 END INTO v_num FROM dual;
@@ -118,7 +118,7 @@ END;
 /
 
 --------------------------
--- View de catálogo
+-- View de catÃ¡logo
 --------------------------
 BEGIN EXECUTE IMMEDIATE 'DROP VIEW vw_produtos_com_tamanhos'; EXCEPTION WHEN OTHERS THEN NULL; END;
 /
@@ -139,3 +139,4 @@ FROM produtos p
     JOIN tamanhos t ON t.id = pt.tamanho_id
     ) tt ON tt.produto_id = p.id
 GROUP BY p.id, p.titulo, p.subtitulo, p.categoria;
+

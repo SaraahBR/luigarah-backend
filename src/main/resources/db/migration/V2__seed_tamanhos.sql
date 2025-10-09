@@ -1,4 +1,4 @@
-ALTER SESSION SET CURRENT_SCHEMA = APP_LUIGARAH;
+﻿ALTER SESSION SET CURRENT_SCHEMA = APP_LUIGARAH;
 
 -- Roupas
 MERGE INTO tamanhos t
@@ -22,3 +22,4 @@ MERGE INTO tamanhos t
     ON (t.categoria=s.categoria AND t.etiqueta=s.etiqueta)
     WHEN NOT MATCHED THEN
         INSERT (categoria, etiqueta, ordem) VALUES (s.categoria, s.etiqueta, s.ordem);
+
