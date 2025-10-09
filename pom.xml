@@ -67,17 +67,17 @@
         <dependency>
             <groupId>com.oracle.database.security</groupId>
             <artifactId>oraclepki</artifactId>
-            <version>23.2.0.0</version>
+            <version>21.11.0.0</version>
         </dependency>
         <dependency>
             <groupId>com.oracle.database.security</groupId>
             <artifactId>osdt_core</artifactId>
-            <version>23.2.0.0</version>
+            <version>21.11.0.0</version>
         </dependency>
         <dependency>
             <groupId>com.oracle.database.security</groupId>
             <artifactId>osdt_cert</artifactId>
-            <version>23.2.0.0</version>
+            <version>21.11.0.0</version>
         </dependency>
 
         <!-- Swagger / OpenAPI -->
