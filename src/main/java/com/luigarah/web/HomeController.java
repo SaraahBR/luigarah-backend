@@ -5,9 +5,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
 public class HomeController {
+
     @GetMapping("/")
     public String home() {
-        // Encaminha para a UI do Swagger
-        return "forward:/swagger-ui/index.html";
+        // Redireciona automaticamente para o Swagger UI
+        return "redirect:/swagger-ui/index.html";
     }
 }
