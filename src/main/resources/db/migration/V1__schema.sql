@@ -98,7 +98,7 @@ END IF;
 END;
 /
 
--- ValidaÃ§Ã£o de etiquetas por categoria
+-- Validacao de etiquetas por categoria
 CREATE OR REPLACE TRIGGER tamanhos_valida_etiqueta
 BEFORE INSERT OR UPDATE ON tamanhos
                             FOR EACH ROW
@@ -118,7 +118,7 @@ END;
 /
 
 --------------------------
--- View de catÃ¡logo
+-- View de catalogo
 --------------------------
 BEGIN EXECUTE IMMEDIATE 'DROP VIEW vw_produtos_com_tamanhos'; EXCEPTION WHEN OTHERS THEN NULL; END;
 /
