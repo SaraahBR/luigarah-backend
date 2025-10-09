@@ -16,6 +16,7 @@ public class OpenApiConfig {
     @Bean
     public OpenAPI luigaraOpenAPI() {
 
+        // URL relativa: usa o mesmo domínio/porta (Render ou localhost)
         Server sameOrigin = new Server()
                 .url("/")
                 .description("Servidor Atual (Render ou Localhost)");

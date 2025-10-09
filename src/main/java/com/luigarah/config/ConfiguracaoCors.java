@@ -20,7 +20,6 @@ public class ConfiguracaoCors implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                // ✅ Corrigido: agora usa allowedOriginPatterns
                 .allowedOriginPatterns(origensPermitidas.split(","))
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
