@@ -22,15 +22,15 @@ RUN apt-get update && apt-get install -y unzip && rm -rf /var/lib/apt/lists/*
 
 # Script de entrada: se houver /secrets/wallet.zip, descompacta em /opt/app/wallet
 # e exporta TNS_ADMIN apontando para lá.
-RUN printf '#!/usr/bin/env bash\n'\
-'set -euo pipefail\n'\
-'if [ -f "/secrets/wallet.zip" ]; then\n'\
-'  rm -rf /opt/app/wallet/*\n'\
-'  unzip -oq /secrets/wallet.zip -d /opt/app/wallet\n'\
-'fi\n'\
-'export TNS_ADMIN=${TNS_ADMIN:-/opt/app/wallet}\n'\
-'echo "TNS_ADMIN=$TNS_ADMIN"\n'\
-'exec java -XX:+ExitOnOutOfMemoryError -Dserver.port=${PORT:-8080} -jar /opt/app/app.jar\n' > /opt/app/entrypoint.sh \
+RUN printf '#!/usr/bin/env bash\n\
+set -euo pipefail\n\
+if [ -f "/etc/secrets/wallet.zip" ]; then\n\
+  rm -rf /opt/app/wallet/*\n\
+  unzip -oq /etc/secrets/wallet.zip -d /opt/app/wallet\n\
+fi\n\
+export TNS_ADMIN=${TNS_ADMIN:-/opt/app/wallet}\n\
+echo "TNS_ADMIN=$TNS_ADMIN"\n\
+exec java -XX:+ExitOnOutOfMemoryError -Dserver.port=${PORT:-8080} -jar /opt/app/app.jar\n' > /opt/app/entrypoint.sh \
  && chmod +x /opt/app/entrypoint.sh
 
 EXPOSE 8080

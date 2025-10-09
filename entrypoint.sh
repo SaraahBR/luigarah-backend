@@ -1,20 +1,32 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Se o Render tiver um Secret File em /secrets/wallet.zip, descompacta
-if [ -f "/secrets/wallet.zip" ]; then
-  echo "[entrypoint] Found /secrets/wallet.zip, unpacking to /opt/app/wallet..."
+# ===============================
+# Oracle Wallet (Render Secret)
+# ===============================
+# O Render monta secret files em /etc/secrets/<nome-do-arquivo>
+# Então, se houver wallet.zip lá, ele é extraído para /opt/app/wallet
+if [ -f "/etc/secrets/wallet.zip" ]; then
+  echo "[entrypoint] Found /etc/secrets/wallet.zip, unpacking to /opt/app/wallet..."
   rm -rf /opt/app/wallet/*
-  unzip -oq /secrets/wallet.zip -d /opt/app/wallet
+  unzip -oq /etc/secrets/wallet.zip -d /opt/app/wallet
+else
+  echo "[entrypoint] Wallet file not found at /etc/secrets/wallet.zip"
 fi
 
-# Garante TNS_ADMIN
+# ===============================
+# Configurações do Oracle
+# ===============================
 export TNS_ADMIN="${TNS_ADMIN:-/opt/app/wallet}"
 echo "[entrypoint] TNS_ADMIN=$TNS_ADMIN"
 
-# Porta exposta pelo Render
+# ===============================
+# Porta da aplicação (Render define automaticamente)
+# ===============================
 export PORT="${PORT:-8080}"
 echo "[entrypoint] PORT=$PORT"
 
-# Sobe a aplicação
+# ===============================
+# Inicializa aplicação
+# ===============================
 exec java -XX:+ExitOnOutOfMemoryError -Dserver.port="${PORT}" -jar /opt/app/app.jar
