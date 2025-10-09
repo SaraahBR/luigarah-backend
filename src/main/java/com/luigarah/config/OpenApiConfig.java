@@ -1,4 +1,3 @@
-// src/main/java/com/luigarah/config/OpenApiConfig.java
 package com.luigarah.config;
 
 import io.swagger.v3.oas.models.OpenAPI;
