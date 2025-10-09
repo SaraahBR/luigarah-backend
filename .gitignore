@@ -1,0 +1,77 @@
+# ============================
+# JAVA / MAVEN / SPRING BOOT
+# ============================
+target/
+*.class
+*.log
+*.jar
+*.war
+*.ear
+
+# ============================
+# IDEs e ambientes
+# ============================
+.idea/
+*.iml
+.vscode/
+*.sw?
+*.swo
+.DS_Store
+
+# ============================
+# Logs e temporários
+# ============================
+logs/
+*.log
+*.out
+hs_err_pid*
+replay_pid*
+*.tmp
+
+# ============================
+# Sistema / Windows / Mac
+# ============================
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# ============================
+# Wallet Oracle Cloud (NUNCA subir)
+# ============================
+Wallet_*/
+wallet_*/
+wallet.zip
+*.p12
+*.pem
+*.sso
+*.ora
+*.json
+*.key
+*.cer
+*.crt
+
+# ============================
+# Docker
+# ============================
+/opt/app/wallet/
+*.tar
+*.gz
+*.zip
+*.bak
+
+# ============================
+# Render / Build local
+# ============================
+.env
+/secrets/
+*.secret
+
+# ============================
+# Sistema operacional / temporários
+# ============================
+*.bak
+*.tmp
+*.swp
+*.old
