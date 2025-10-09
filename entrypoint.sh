@@ -3,38 +3,33 @@ set -euo pipefail
 
 echo "[entrypoint] starting..."
 
-# ===============================
-# 🧩 Oracle Wallet (2 formas)
-# 1) Secret File: /etc/secrets/wallet.zip (Render converte em texto, pode quebrar)
-# 2) ENV Base64 : ORACLE_WALLET_ZIP_B64
-# ===============================
 mkdir -p /opt/app/wallet
 
 if [ -n "${ORACLE_WALLET_ZIP_B64:-}" ]; then
-  echo "[entrypoint] Found ORACLE_WALLET_ZIP_B64, decoding and unpacking..."
+  echo "[entrypoint] Found ORACLE_WALLET_ZIP_B64, decoding..."
+  # grava e descompacta
   echo -n "$ORACLE_WALLET_ZIP_B64" | base64 -d > /tmp/wallet.zip
   unzip -oq /tmp/wallet.zip -d /opt/app/wallet
-  echo "[entrypoint] Wallet unpacked successfully from Base64."
-elif [ -f "/etc/secrets/wallet.zip" ]; then
-  echo "[entrypoint] Found /etc/secrets/wallet.zip (not recommended by Render), trying unzip..."
-  unzip -oq /etc/secrets/wallet.zip -d /opt/app/wallet || echo "[WARN] unzip failed, likely text-encoded secret file."
+  echo "[entrypoint] Wallet unpacked to /opt/app/wallet"
 else
-  echo "[entrypoint][WARN] No wallet found (neither Base64 nor Secret File)."
+  echo "[entrypoint][WARN] ORACLE_WALLET_ZIP_B64 not set; wallet may be missing."
 fi
 
-# ===============================
-# Oracle config
-# ===============================
+# checagens de sanidade
+echo "[entrypoint] Listing wallet dir:"
+ls -la /opt/app/wallet || true
+
+if [ ! -f /opt/app/wallet/tnsnames.ora ]; then
+  echo "[entrypoint][ERROR] tnsnames.ora was NOT found in /opt/app/wallet"
+  echo "[entrypoint] Make sure ORACLE_WALLET_ZIP_B64 contains a valid wallet.zip with tnsnames.ora/sqlnet.ora/cwallet.sso"
+  exit 20
+fi
+
 export TNS_ADMIN="${TNS_ADMIN:-/opt/app/wallet}"
 echo "[entrypoint] TNS_ADMIN=$TNS_ADMIN"
 
-# ===============================
-# Porta padrão
-# ===============================
 export PORT="${PORT:-8080}"
 echo "[entrypoint] PORT=$PORT"
 
-# ===============================
-# Start app
-# ===============================
+echo "[entrypoint] starting app..."
 exec java -XX:+ExitOnOutOfMemoryError -Dserver.port="${PORT}" -jar /opt/app/app.jar
