@@ -1,10 +1,12 @@
 package com.luigarah.controller;
 
 import com.luigarah.controller.doc.ProdutoControllerDoc;
+import com.luigarah.dto.ProdutoCreateDTO;
 import com.luigarah.dto.ProdutoDTO;
 import com.luigarah.dto.RespostaProdutoDTO;
+import com.luigarah.mapper.ProdutoMapper;
 import com.luigarah.model.Produto;
-import com.luigarah.repository.RepositorioProduto; // ✅ injetado apenas para o catálogo de tamanhos
+import com.luigarah.repository.RepositorioProduto;
 import com.luigarah.service.ServicoProduto;
 import com.luigarah.util.JsonStringCleaner;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,18 +29,25 @@ import java.util.stream.Collectors;
 /**
  * Controlador REST dos Produtos.
  *
- * Mantém:
- *  - Listagem simples (sem paginação explícita)
- *  - Listagem com filtros (categoria, busca, tamanho/etiqueta)
- *  - Filtros por DIMENSÃO (global e categoria)
- *  - Catálogo de tamanhos por categoria (para alimentar filtros do frontend)
- *  - Endpoints CRUD
- *  - Listas por categoria, por autor e contagem por categoria
+ * Funcionalidades:
+ *  • Listagem simples (sem paginação explícita)
+ *  • Listagem com filtros (categoria, termo de busca, tamanho/etiqueta)
+ *  • Filtros por DIMENSÃO (global e por categoria)
+ *  • Catálogo de tamanhos por categoria (para os filtros do frontend)
+ *  • CRUD completo
+ *  • Buscas por categoria, por autor e contagem por categoria
  *
- * Observação: para o endpoint de catálogo de tamanhos, injetamos o Repositório
- * diretamente aqui por simplicidade/performance (SQL nativa). Caso prefira
- * manter 100% da regra no serviço, basta criar em ServicoProduto um método
- * listarCatalogoEtiquetas(categoria) delegando ao repositório e chamar o serviço.
+ * Notas de arquitetura:
+ *  • O endpoint de criação (POST) aceita um payload “flexível” via {@link ProdutoCreateDTO}:
+ *      - imagens: String única | CSV | Array JSON
+ *      - destaques: String única | CSV | Array JSON
+ *      - modelo: Objeto JSON | String no formato "k:v; k2:v2"
+ *    O {@link ProdutoMapper} converte esse DTO em {@link Produto} normalizando
+ *    os campos para JSON String antes da persistência.
+ *
+ *  • Para o endpoint do catálogo de tamanhos, injetamos o {@link RepositorioProduto}
+ *    diretamente aqui por simplicidade/performance (SQL nativa). Se preferir manter
+ *    100% via serviço, basta expor no {@link ServicoProduto} um método que delegue ao repositório.
  */
 @RestController
 @RequestMapping("/produtos")
@@ -121,7 +130,7 @@ public class ControladorProduto implements ProdutoControllerDoc {
     @GetMapping
     @Operation(
             summary = "Listar todos os produtos (com filtros/paginação)",
-            description = "Suporta filtro por categoria, termo de busca, *tamanho/etiqueta* (ex.: 36, 37, XS, M, ...), ordenação e paginação."
+            description = "Suporta filtro por categoria, termo de busca, tamanho/etiqueta (ex.: 36, 37, XS, M ...), ordenação e paginação."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso."),
@@ -134,7 +143,7 @@ public class ControladorProduto implements ProdutoControllerDoc {
             @RequestParam(defaultValue = "asc") String direcao,
             @RequestParam(required = false) String categoria,
             @RequestParam(required = false) String busca,
-            @RequestParam(name = "tamanho", required = false) String etiquetaTamanho // <- filtro por etiqueta
+            @RequestParam(name = "tamanho", required = false) String etiquetaTamanho
     ) {
 
         try {
@@ -145,7 +154,7 @@ public class ControladorProduto implements ProdutoControllerDoc {
             Page<Produto> paginaProdutos;
 
             if (categoria != null && etiquetaTamanho != null && !etiquetaTamanho.isBlank()) {
-                // categoria + tamanho (para bolsas o service ignora o tamanho)
+                // Categoria + tamanho (para bolsas o service ignora o tamanho)
                 paginaProdutos = servicoProduto.buscarProdutosPorCategoriaETamanho(categoria, etiquetaTamanho, paginacao);
 
             } else if (categoria != null && busca != null && !busca.isBlank()) {
@@ -233,7 +242,7 @@ public class ControladorProduto implements ProdutoControllerDoc {
     }
 
     // ======================================================================
-    // NOVO: CATÁLOGO DE TAMANHOS POR CATEGORIA (para filtros do frontend)
+    // CATÁLOGO DE TAMANHOS POR CATEGORIA (para filtros do frontend)
     // ======================================================================
 
     @Override
@@ -277,7 +286,7 @@ public class ControladorProduto implements ProdutoControllerDoc {
     }
 
     // ======================================================================
-    // NOVO: FILTROS POR DIMENSÃO
+    // FILTROS POR DIMENSÃO
     // ======================================================================
 
     @Override
@@ -400,34 +409,84 @@ public class ControladorProduto implements ProdutoControllerDoc {
         }
     }
 
+    /**
+     * Criar novo produto (entrada flexível).
+     *
+     * Aceita as seguintes variações:
+     *  • imagens: "https://x.jpg" | "https://x.jpg, https://y.jpg" | ["https://x.jpg","https://y.jpg"]
+     *  • destaques: "bordô, sem alças" | ["bordô","sem alças"]
+     *  • modelo: {"altura_cm":177,...} | "altura_cm:177; busto_cm:86; veste:M"
+     *
+     * Os valores são normalizados para JSON String na entidade antes de salvar.
+     */
     @Override
     @PostMapping
     @Operation(
             summary = "Criar novo produto",
-            description = "Cria um novo produto com os dados fornecidos."
+            description = "Aceita imagens/destaques como string única, CSV ou array; e modelo como objeto JSON ou string 'k:v; k2:v2'.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    content = @Content(mediaType = "application/json", examples = {
+                            // Exemplo tradicional (tudo JSON “bonitinho”)
+                            @ExampleObject(name = "Completo (arrays/objeto JSON)", value = """
+                                    {
+                                      "titulo": "Self-Portrait",
+                                      "subtitulo": "Vestido",
+                                      "autor": "Han Chong",
+                                      "descricao": "Vestido longo sem alças",
+                                      "preco": 6141,
+                                      "dimensao": "Grande",
+                                      "imagem": "https://cdn-images.farfetch-contents.com/31/31/30/88/31313088_60957373_2048.jpg",
+                                      "imagemHover": "https://cdn-images.farfetch-contents.com/31/31/30/88/31313088_60957390_2048.jpg",
+                                      "imagens": ["https://cdn-images.farfetch-contents.com/31/31/30/88/31313088_60957344_2048.jpg"],
+                                      "composicao": "Poliéster 100%",
+                                      "destaques": ["bordô", "sem alças", "fenda lateral"],
+                                      "categoria": "roupas",
+                                      "modelo": {"altura_cm":177,"busto_cm":86,"cintura_cm":62,"quadril_cm":90,"veste":"M"}
+                                    }
+                                    """),
+                            // Exemplo simplificado (string/CSV/pares)
+                            @ExampleObject(name = "Simplificado (strings/CSV/pares)", value = """
+                                    {
+                                      "titulo": "Self-Portrait",
+                                      "subtitulo": "Vestido",
+                                      "autor": "Han Chong",
+                                      "descricao": "Vestido longo sem alças",
+                                      "preco": 6141,
+                                      "dimensao": "Grande",
+                                      "imagem": "https://cdn-images.farfetch-contents.com/31/31/30/88/31313088_60957373_2048.jpg",
+                                      "imagemHover": "https://cdn-images.farfetch-contents.com/31/31/30/88/31313088_60957390_2048.jpg",
+                                      "imagens": "https://cdn-images.farfetch-contents.com/31/31/30/88/31313088_60957344_2048.jpg",
+                                      "composicao": "Poliéster 100%",
+                                      "destaques": "bordô, sem alças, fenda lateral",
+                                      "categoria": "roupas",
+                                      "modelo": "altura_cm:177; busto_cm:86; cintura_cm:62; quadril_cm:90; veste:M"
+                                    }
+                                    """)
+                    })
+            )
     )
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Produto criado com sucesso."),
             @ApiResponse(responseCode = "400", description = "Dados inválidos."),
             @ApiResponse(responseCode = "500", description = "Erro interno.")
     })
-    public ResponseEntity<RespostaProdutoDTO<ProdutoDTO>> criarProduto(@Valid @RequestBody ProdutoDTO produtoDTO) {
+    public ResponseEntity<RespostaProdutoDTO<ProdutoDTO>> criarProduto(
+            @Valid @RequestBody ProdutoCreateDTO body) {
         try {
-            Produto produto = converterParaEntidade(produtoDTO);
-            Produto produtoSalvo = servicoProduto.criarProduto(produto);
-            ProdutoDTO produtoSalvoDTO = converterParaDTO(produtoSalvo);
+            // Converte o DTO flexível para a entidade, serializando listas/objeto em JSON String
+            Produto entidade = ProdutoMapper.toEntity(body);
+            entidade.setId(null); // força uso da SEQUENCE mesmo que venha id no payload
 
-            RespostaProdutoDTO<ProdutoDTO> resposta = RespostaProdutoDTO.sucesso(
-                    produtoSalvoDTO, "Produto criado com sucesso"
-            );
+            Produto salvo = servicoProduto.criarProduto(entidade);
+            ProdutoDTO dto = converterParaDTO(salvo);
 
-            return ResponseEntity.status(HttpStatus.CREATED).body(resposta);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(RespostaProdutoDTO.sucesso(dto, "Produto criado com sucesso"));
 
         } catch (Exception e) {
-            RespostaProdutoDTO<ProdutoDTO> resposta = RespostaProdutoDTO.erro(
-                    "Erro ao criar produto: " + e.getMessage()
-            );
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(resposta);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(RespostaProdutoDTO.erro("Erro ao criar produto: " + e.getMessage()));
         }
     }
 
@@ -648,20 +707,26 @@ public class ControladorProduto implements ProdutoControllerDoc {
     // Auxiliares de conversão DTO <-> entidade
     // ======================================================================
 
+    /**
+     * Converte a entidade para DTO, sanitizando os campos JSON em String
+     * para evitar CR/LF e espaços indesejados que quebram o front.
+     */
     private ProdutoDTO converterParaDTO(Produto produto) {
         ProdutoDTO dto = new ProdutoDTO();
         BeanUtils.copyProperties(produto, dto);
-        // limpeza para o front receber JSON sem \r\n extras
         dto.setImagens(JsonStringCleaner.clean(dto.getImagens()));
         dto.setDestaques(JsonStringCleaner.clean(dto.getDestaques()));
         dto.setModelo(JsonStringCleaner.clean(dto.getModelo()));
         return dto;
     }
 
+    /**
+     * Converte o DTO “tradicional” (usado nos demais endpoints) para a entidade.
+     * Aqui os campos que carregam JSON em String também são limpos.
+     */
     private Produto converterParaEntidade(ProdutoDTO dto) {
         Produto produto = new Produto();
         BeanUtils.copyProperties(dto, produto);
-        // limpeza antes de persistir/atualizar
         produto.setImagens(JsonStringCleaner.clean(produto.getImagens()));
         produto.setDestaques(JsonStringCleaner.clean(produto.getDestaques()));
         produto.setModelo(JsonStringCleaner.clean(produto.getModelo()));

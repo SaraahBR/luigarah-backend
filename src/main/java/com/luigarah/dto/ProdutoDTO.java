@@ -21,7 +21,8 @@ import java.time.LocalDateTime;
 @Schema(description = "DTO para transferência de dados de produto")
 public class ProdutoDTO {
 
-    @Schema(description = "ID único do produto", example = "1")
+    @Schema(description = "ID único do produto (gerado no backend; ignore no POST de criação)",
+            example = "1", accessMode = Schema.AccessMode.READ_ONLY)
     private Long id;
 
     @NotBlank(message = "Título é obrigatório")
@@ -142,7 +143,7 @@ public class ProdutoDTO {
     // =========================
 
     public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public void setId(Long id) { this.id = id; } // será ignorado no create pelo service
 
     public String getTitulo() { return titulo; }
     public void setTitulo(String titulo) { this.titulo = cleanText(titulo); }

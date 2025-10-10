@@ -17,24 +17,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
-/**
- * Implementação do serviço de Produtos.
- *
- * Mantém:
- *  - CRUD de Produto
- *  - Listagens e buscas (categoria, subtítulo, termo)
- *  - Filtro por TAMANHO/ETIQUETA (para bolsas é ignorado)
- *  - Filtro por DIMENSÃO (global e por categoria)
- *  - Gestão de tamanhos vinculados ao produto (listar/substituir/adicionar/remover)
- *  - Estoque:
- *      • Bolsas: estoque por produto (tabela produtos_estoque)
- *      • Roupas/Sapatos: estoque por etiqueta de tamanho (tabela produtos_tamanhos)
- *
- * Observações:
- *  1) Campos texto que guardam JSON ("imagens", "destaques", "modelo")
- *     são limpos/normalizados via {@link JsonStringCleaner} antes de salvar/retornar.
- *  2) Para tamanhos/estoque, o repositório executa SQL nativo nas tabelas auxiliares.
- */
 @Service
 @Transactional
 public class ServicoProdutoImpl implements ServicoProduto {
@@ -42,14 +24,9 @@ public class ServicoProdutoImpl implements ServicoProduto {
     @Autowired
     private RepositorioProduto repositorioProduto;
 
-    // =========================================================================
-    // LISTAGENS BÁSICAS / CRUD
-    // =========================================================================
-
     @Override
     @Transactional(readOnly = true)
     public Page<Produto> buscarTodosProdutos(Pageable pageable) {
-        // Quando o Pageable vier "unpaged", evitamos consulta paginada
         if (pageable == null || pageable.isUnpaged()) {
             List<Produto> todos = repositorioProduto.findAll();
             return new PageImpl<>(todos, Pageable.unpaged(), todos.size());
@@ -97,10 +74,14 @@ public class ServicoProdutoImpl implements ServicoProduto {
 
     @Override
     public Produto criarProduto(Produto produto) {
+        // ⚠️ garantir que a SEQUENCE gere o ID mesmo que o front envie id no DTO
+        produto.setId(null);
+
         // Normaliza campos JSON guardados como String antes de persistir
         produto.setImagens(JsonStringCleaner.clean(produto.getImagens()));
         produto.setDestaques(JsonStringCleaner.clean(produto.getDestaques()));
         produto.setModelo(JsonStringCleaner.clean(produto.getModelo()));
+
         return repositorioProduto.save(produto);
     }
 
@@ -109,7 +90,6 @@ public class ServicoProdutoImpl implements ServicoProduto {
         Produto p = repositorioProduto.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException("Produto com ID " + id + " não encontrado"));
 
-        // Atualiza apenas campos não-nulos
         if (produtoAtualizado.getTitulo() != null)           p.setTitulo(produtoAtualizado.getTitulo());
         if (produtoAtualizado.getSubtitulo() != null)        p.setSubtitulo(produtoAtualizado.getSubtitulo());
         if (produtoAtualizado.getAutor() != null)            p.setAutor(produtoAtualizado.getAutor());
@@ -147,47 +127,15 @@ public class ServicoProdutoImpl implements ServicoProduto {
         return repositorioProduto.existsById(id);
     }
 
-    // =========================================================================
-    // FILTROS AVANÇADOS (TAMANHO / DIMENSÃO)
-    // =========================================================================
-
-    /**
-     * Busca por categoria e etiqueta de tamanho.
-     * Para BOLSAS, o filtro de tamanho é ignorado (todas são "únicas"/sem etiqueta).
-     */
-    @Override
-    @Transactional(readOnly = true)
-    public Page<Produto> buscarProdutosPorCategoriaETamanho(String categoria, String etiqueta, Pageable pageable) {
-        if (categoria == null || categoria.isBlank()) {
-            // sem categoria definida, retorna geral
-            return buscarTodosProdutos(pageable);
-        }
-        if ("bolsas".equalsIgnoreCase(categoria) || etiqueta == null || etiqueta.isBlank()) {
-            // bolsas não têm etiqueta por tamanho OU etiqueta vazia => cai no filtro simples por categoria
-            return repositorioProduto.findByCategoria(categoria, pageable);
-        }
-        // Para roupas/sapatos com etiqueta
-        return repositorioProduto.buscarPorCategoriaETamanho(categoria, etiqueta, pageable);
-    }
-
-    /**
-     * Busca todos os produtos por dimensão (ex.: Grande, Média, Mini).
-     * Case-insensitive.
-     */
     @Override
     @Transactional(readOnly = true)
     public Page<Produto> buscarProdutosPorDimensao(String dimensao, Pageable pageable) {
         if (dimensao == null || dimensao.isBlank()) {
             return buscarTodosProdutos(pageable);
         }
-        // Requer no RepositorioProduto: Page<Produto> findByDimensaoIgnoreCase(String, Pageable)
         return repositorioProduto.findByDimensaoIgnoreCase(dimensao, pageable);
     }
 
-    /**
-     * Busca produtos por categoria E dimensão (ex.: bolsas Mini, roupas Média).
-     * Case-insensitive em dimensão.
-     */
     @Override
     @Transactional(readOnly = true)
     public Page<Produto> buscarProdutosPorCategoriaEDimensao(String categoria, String dimensao, Pageable pageable) {
@@ -197,43 +145,33 @@ public class ServicoProdutoImpl implements ServicoProduto {
         if (dimensao == null || dimensao.isBlank()) {
             return buscarProdutosPorCategoria(categoria, pageable);
         }
-        // Requer no RepositorioProduto: Page<Produto> findByCategoriaAndDimensaoIgnoreCase(String, String, Pageable)
         return repositorioProduto.findByCategoriaAndDimensaoIgnoreCase(categoria, dimensao, pageable);
     }
 
-    // =========================================================================
-    // OPERAÇÕES DE TAMANHOS VINCULADOS AO PRODUTO
-    // =========================================================================
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Produto> buscarProdutosPorCategoriaETamanho(String categoria, String etiqueta, Pageable pageable) {
+        if (categoria == null || categoria.isBlank()) {
+            return buscarTodosProdutos(pageable);
+        }
+        if ("bolsas".equalsIgnoreCase(categoria) || etiqueta == null || etiqueta.isBlank()) {
+            return repositorioProduto.findByCategoria(categoria, pageable);
+        }
+        return repositorioProduto.buscarPorCategoriaETamanho(categoria, etiqueta, pageable);
+    }
 
-    /**
-     * Retorna a lista de etiquetas de tamanho já vinculadas ao produto.
-     * A ordenação respeita a coluna ORDEM do catálogo (tamanhos.ordem), quando existir.
-     */
     @Override
     @Transactional(readOnly = true)
     public List<String> listarTamanhosDoProduto(Long produtoId) {
         return repositorioProduto.listarEtiquetasPorProduto(produtoId);
     }
 
-    /**
-     * Substitui TODAS as etiquetas de tamanho do produto pelas informadas.
-     * Implementado como: DELETE de vínculos + re-inserção controlada.
-     *
-     * @param produtoId id do produto
-     * @param etiquetas lista de etiquetas (ex.: ["XS","S","M"])
-     * @return lista final de etiquetas vinculadas após a operação
-     */
     @Override
     public List<String> substituirTamanhosDoProduto(Long produtoId, List<String> etiquetas) {
         repositorioProduto.deletarTamanhosDoProduto(produtoId);
         return adicionarTamanhosAoProduto(produtoId, etiquetas);
     }
 
-    /**
-     * Adiciona etiquetas ao produto sem remover as existentes.
-     * Válida etiquetas em branco/nulas e ignora duplicidade via regra SQL no repositório.
-     * Ao inserir, definimos um estoque inicial padrão (ex.: 10 unidades).
-     */
     @Override
     public List<String> adicionarTamanhosAoProduto(Long produtoId, List<String> etiquetas) {
         if (etiquetas == null || etiquetas.isEmpty()) {
@@ -241,17 +179,11 @@ public class ServicoProdutoImpl implements ServicoProduto {
         }
         for (String et : new ArrayList<>(etiquetas)) {
             if (et == null || et.isBlank()) continue;
-            // estoque inicial padrão = 10 (ajuste conforme sua necessidade)
             repositorioProduto.inserirTamanho(produtoId, et.trim(), 10);
         }
         return listarTamanhosDoProduto(produtoId);
     }
 
-    /**
-     * Remove uma etiqueta específica do produto.
-     *
-     * @return true se removeu pelo menos 1 linha; false se não havia vínculo
-     */
     @Override
     public boolean removerTamanhoDoProduto(Long produtoId, String etiqueta) {
         if (etiqueta == null || etiqueta.isBlank()) return false;
@@ -259,16 +191,6 @@ public class ServicoProdutoImpl implements ServicoProduto {
         return linhas > 0;
     }
 
-    // =========================================================================
-    // ESTOQUE - BOLSAS (por produto) e ROUPAS/SAPATOS (por etiqueta)
-    // =========================================================================
-
-    /**
-     * Lê o estoque consolidado de um produto.
-     * - Para BOLSAS: retorna a quantidade de produtos_estoque.
-     * - Para ROUPAS/SAPATOS: costuma-se usar o estoque por etiqueta (listarEstoquePorProduto),
-     *   mas aqui retornamos null (sem significado único) para não confundir.
-     */
     @Override
     @Transactional(readOnly = true)
     public Integer obterEstoqueProduto(Long produtoId) {
@@ -276,105 +198,62 @@ public class ServicoProdutoImpl implements ServicoProduto {
         if ("bolsas".equalsIgnoreCase(categoria)) {
             return repositorioProduto.obterEstoqueProduto(produtoId);
         }
-        // Para roupas/sapatos, o estoque é por tamanho (use listarEstoquePorProduto)
         return null;
     }
 
-    /**
-     * Define (upsert) a quantidade de estoque de um produto.
-     * - Para BOLSAS: grava em produtos_estoque.
-     * - Para ROUPAS/SAPATOS: como o estoque é por etiqueta, este método não se aplica;
-     *   não faremos nada para essas categorias.
-     */
     @Override
     public void definirEstoqueProduto(Long produtoId, int qtd) {
         String categoria = obterCategoriaSegura(produtoId);
         if ("bolsas".equalsIgnoreCase(categoria)) {
             repositorioProduto.upsertEstoqueProduto(produtoId, qtd);
         }
-        // roupas/sapatos -> usar upsertEstoquePorEtiqueta
     }
 
-    /**
-     * Incrementa/decrementa o estoque de um produto (delta pode ser negativo).
-     * - Para BOLSAS: atualiza linha única em produtos_estoque.
-     * - Para ROUPAS/SAPATOS: não se aplica (usar incrementarEstoquePorEtiqueta).
-     *
-     * @return linhas atualizadas (para bolsas) ou 0 (quando não aplicável)
-     */
     @Override
     public int incrementarEstoqueProduto(Long produtoId, int delta) {
         String categoria = obterCategoriaSegura(produtoId);
         if ("bolsas".equalsIgnoreCase(categoria)) {
             return repositorioProduto.incrementarEstoqueProduto(produtoId, delta);
         }
-        return 0; // roupas/sapatos -> use incrementarEstoquePorEtiqueta
+        return 0;
     }
 
-    /**
-     * Lista o estoque por etiqueta/tamanho do produto (somente para roupas/sapatos).
-     * O array retorna: [0] = etiqueta (String), [1] = qtd (Number).
-     * Para BOLSAS, retorna lista vazia (estoque é por produto).
-     */
     @Override
     @Transactional(readOnly = true)
     public List<Object[]> listarEstoquePorProduto(Long produtoId) {
         String categoria = obterCategoriaSegura(produtoId);
         if ("bolsas".equalsIgnoreCase(categoria)) {
-            return List.of(); // bolsas não têm estoque por tamanho
+            return List.of();
         }
         return repositorioProduto.listarEstoquePorProduto(produtoId);
     }
 
-    /**
-     * Upsert de estoque por etiqueta/tamanho (roupas/sapatos).
-     * Para BOLSAS, este método não se aplica; se desejar tratar bolsas aqui,
-     * poderíamos redirecionar para definirEstoqueProduto(produtoId, qtd).
-     */
     @Override
     public void upsertEstoquePorEtiqueta(Long produtoId, String etiqueta, int qtd) {
         if (etiqueta == null || etiqueta.isBlank()) return;
         String categoria = obterCategoriaSegura(produtoId);
         if ("bolsas".equalsIgnoreCase(categoria)) {
-            // Opcional: redirecionar para estoque por produto
-            // repositorioProduto.upsertEstoqueProduto(produtoId, qtd);
             return;
         }
         repositorioProduto.upsertEstoquePorEtiqueta(produtoId, etiqueta.trim(), qtd);
     }
 
-    /**
-     * Incrementa/decrementa o estoque por etiqueta/tamanho (delta pode ser negativo).
-     * Se não existir vínculo ainda e delta > 0, fazemos um upsert como fallback.
-     *
-     * @return linhas atualizadas (>=1 quando houve mudança)
-     */
     @Override
     public int incrementarEstoquePorEtiqueta(Long produtoId, String etiqueta, int delta) {
         if (etiqueta == null || etiqueta.isBlank()) return 0;
         String categoria = obterCategoriaSegura(produtoId);
         if ("bolsas".equalsIgnoreCase(categoria)) {
-            // bolsas não usam etiqueta; para efeito prático, não aplicamos
             return 0;
         }
 
         int linhas = repositorioProduto.incrementarEstoquePorEtiqueta(produtoId, etiqueta.trim(), delta);
         if (linhas == 0 && delta > 0) {
-            // não existia vínculo; cria com a quantidade informada
             repositorioProduto.upsertEstoquePorEtiqueta(produtoId, etiqueta.trim(), delta);
             return 1;
         }
         return linhas;
     }
 
-    // =========================================================================
-    // Helpers
-    // =========================================================================
-
-    /**
-     * Tenta descobrir a categoria do produto pelo repositório.
-     * Se não encontrar, devolve string vazia.
-     */
     @Transactional(readOnly = true)
     protected String obterCategoriaSegura(Long produtoId) {
         try {

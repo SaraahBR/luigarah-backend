@@ -13,105 +13,105 @@ import java.time.LocalDateTime;
  *
  * ⚠️ Sanitização:
  * - Campos de URL (imagem / imagemHover) passam por cleanUrl(): remove CR/LF, espaços nas pontas e QUALQUER whitespace no meio.
- *   (URL não deve ter espaços; se vierem, quebram o front)
- * - Campo imagens (JSON em String contendo array de URLs) passa por cleanUrlArrayJson():
- *      - remove CR/LF
- *      - trim
- *      - remove espaços imediatamente antes/ depois de aspas dentro do JSON (ex.: "https://...jpg    " -> "https://...jpg")
+ * - Campo imagens (JSON em String contendo array de URLs) passa por cleanUrlArrayJson().
  * - Demais Strings passam por cleanText(): remove CR/LF e trim, preservando espaços internos.
  */
 @Entity
-@Table(name = "produtos")
+@Table(name = "PRODUTOS", schema = "APP_LUIGARAH")
+@SequenceGenerator(
+        name = "produtos_seq_gen",
+        sequenceName = "APP_LUIGARAH.PRODUTOS_SEQ",
+        allocationSize = 1
+)
 public class Produto {
 
     @Id
-    @Column(name = "id")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "produtos_seq_gen")
+    @Column(name = "ID", nullable = false, updatable = false)
     private Long id;
 
     @NotBlank(message = "Título é obrigatório")
     @Size(max = 255, message = "Título deve ter no máximo 255 caracteres")
-    @Column(nullable = false)
+    @Column(name = "TITULO", nullable = false, length = 255)
     private String titulo;
 
     @NotBlank(message = "Subtítulo é obrigatório")
     @Size(max = 255, message = "Subtítulo deve ter no máximo 255 caracteres")
-    @Column(nullable = false)
+    @Column(name = "SUBTITULO", nullable = false, length = 255)
     private String subtitulo;
 
     @NotBlank(message = "Autor é obrigatório")
     @Size(max = 255, message = "Autor deve ter no máximo 255 caracteres")
-    @Column(nullable = false)
+    @Column(name = "AUTOR", nullable = false, length = 255)
     private String autor;
 
     @NotBlank(message = "Descrição é obrigatória")
     @Lob
     @Basic(fetch = FetchType.EAGER)
-    @Column(nullable = false)
+    @Column(name = "DESCRICAO", nullable = false)
     private String descricao;
 
     @NotNull(message = "Preço é obrigatório")
     @DecimalMin(value = "0.0", inclusive = false, message = "Preço deve ser maior que zero")
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(name = "PRECO", nullable = false, precision = 19, scale = 2)
     private BigDecimal preco;
 
     @NotBlank(message = "Dimensão é obrigatória")
     @Size(max = 100, message = "Dimensão deve ter no máximo 100 caracteres")
-    @Column(nullable = false)
+    @Column(name = "DIMENSAO", nullable = false, length = 100)
     private String dimensao;
 
     @NotBlank(message = "Imagem principal é obrigatória")
     @Lob
     @Basic(fetch = FetchType.EAGER)
-    @Column(nullable = false)
+    @Column(name = "IMAGEM", nullable = false)
     private String imagem;
 
     @Lob
     @Basic(fetch = FetchType.EAGER)
-    @Column(name = "imagem_hover")
+    @Column(name = "IMAGEM_HOVER")
     private String imagemHover;
 
     /** JSON em texto: array de URLs. */
     @Lob
-    @Basic(fetch = FetchType.EAGER) // garantir que venha carregado
-    @Column(name = "imagens")
+    @Basic(fetch = FetchType.EAGER)
+    @Column(name = "IMAGENS")
     private String imagens;
 
     @NotBlank(message = "Composição é obrigatória")
     @Lob
     @Basic(fetch = FetchType.EAGER)
-    @Column(nullable = false)
+    @Column(name = "COMPOSICAO", nullable = false)
     private String composicao;
 
     /** JSON em texto: array de strings. */
-    @Lob
-    @Basic(fetch = FetchType.EAGER) // garantir que venha carregado
-    @Column(name = "destaques")
+    /** Destaques como texto longo (VARCHAR2(16000) no Oracle). */
+    @Column(name = "DESTAQUES", length = 16000)
     private String destaques;
 
     @NotBlank(message = "Categoria é obrigatória")
     @Pattern(regexp = "bolsas|roupas|sapatos", message = "Categoria deve ser: bolsas, roupas ou sapatos")
-    @Column(nullable = false, length = 50)
+    @Column(name = "CATEGORIA", nullable = false, length = 50)
     private String categoria;
 
     /** JSON em texto: objeto com medidas. */
     @Lob
-    @Basic(fetch = FetchType.EAGER) // garantir que venha carregado
-    @Column(name = "modelo")
+    @Basic(fetch = FetchType.EAGER)
+    @Column(name = "MODELO")
     private String modelo;
 
     @CreationTimestamp
-    @Column(name = "data_criacao", nullable = false, updatable = false)
+    @Column(name = "DATA_CRIACAO", nullable = false, updatable = false)
     private LocalDateTime dataCriacao;
 
     @UpdateTimestamp
-    @Column(name = "data_atualizacao", nullable = false)
+    @Column(name = "DATA_ATUALIZACAO", nullable = false)
     private LocalDateTime dataAtualizacao;
 
     public Produto() {}
 
     public Produto(String titulo, String subtitulo, String autor, String descricao,
                    BigDecimal preco, String dimensao, String imagem, String categoria) {
-        // usa setters para garantir limpeza
         setTitulo(titulo);
         setSubtitulo(subtitulo);
         setAutor(autor);
@@ -133,35 +133,18 @@ public class Produto {
         return s;
     }
 
-    /**
-     * Sanitiza URL:
-     * - remove CR/LF
-     * - remove espaços nas pontas
-     * - remove QUALQUER whitespace no meio (\\s+), pois URL com espaço é inválida.
-     */
+    /** Sanitiza URL removendo CR/LF, trim e QUALQUER whitespace interno. */
     private static String cleanUrl(String raw) {
         if (raw == null) return null;
-        // primeiro tira CR/LF e poda pontas
         String s = cleanText(raw);
-        // remove qualquer whitespace restante (inclui espaço, tab, etc.)
-        s = s.replaceAll("\\s+", "");
-        return s;
+        return s.replaceAll("\\s+", "");
     }
 
-    /**
-     * Sanitiza JSON com array de URLs em String.
-     * Objetivo: remover CR/LF e espaços que ficam grudados antes/ depois das aspas dos itens do array.
-     *
-     * Ex.: ["https://a.jpg\\n            ", "https://b.jpg"] => ["https://a.jpg","https://b.jpg"]
-     *
-     * Obs.: não removemos espaços "internos" normais fora das Strings; JSON tolera, mas mantemos compacto.
-     */
+    /** Sanitiza JSON (array de URLs) removendo CR/LF e espaços grudados nas aspas. */
     private static String cleanUrlArrayJson(String raw) {
         if (raw == null) return null;
         String s = raw.replace("\r", "").replace("\n", "").trim();
-        // remove espaços imediatamente antes de uma aspa de fechamento dentro do array
         s = s.replaceAll("\\s+\"", "\"");
-        // (defensivo) remove espaços imediatamente após abertura de aspa
         s = s.replaceAll("\"\\s+", "\"");
         return s;
     }
@@ -171,7 +154,7 @@ public class Produto {
     // =========================
 
     public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public void setId(Long id) { this.id = id; } // ignorado no create pelo service
 
     public String getTitulo() { return titulo; }
     public void setTitulo(String titulo) { this.titulo = cleanText(titulo); }
