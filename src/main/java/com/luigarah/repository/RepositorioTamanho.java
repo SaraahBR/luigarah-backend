@@ -9,22 +9,37 @@ import java.util.List;
 
 public interface RepositorioTamanho extends JpaRepository<Tamanho, Long> {
 
-    // Retorna registros Tamanho ordenados por ORDEM (se existir) e ETIQUETA.
-    // Como é native, não exige que a propriedade 'ordem' exista na entidade.
+    // Catálogo por categoria/padrão (padrão opcional).
     @Query(value = """
-            SELECT *
-              FROM tamanhos
-             WHERE categoria = :categoria
-             ORDER BY ordem NULLS FIRST, etiqueta
+            SELECT t.*
+              FROM tamanhos t
+             WHERE t.categoria = :categoria
+               AND (:padrao IS NULL OR t.padrao = :padrao)
+             ORDER BY t.ordem NULLS FIRST, t.etiqueta
             """, nativeQuery = true)
-    List<Tamanho> findByCategoriaOrderByOrdemAscEtiquetaAsc(@Param("categoria") String categoria);
+    List<Tamanho> findByCategoriaAndPadraoOrder(@Param("categoria") String categoria,
+                                                @Param("padrao") String padrao);
 
-    // Somente as etiquetas já ordenadas (útil para catálogos).
+    // Somente etiquetas (ordenadas)
     @Query(value = """
             SELECT t.etiqueta
               FROM tamanhos t
              WHERE t.categoria = :categoria
+               AND (:padrao IS NULL OR t.padrao = :padrao)
              ORDER BY t.ordem NULLS FIRST, t.etiqueta
             """, nativeQuery = true)
-    List<String> listarEtiquetasOrdenadas(@Param("categoria") String categoria);
+    List<String> listarEtiquetas(@Param("categoria") String categoria,
+                                 @Param("padrao") String padrao);
+
+    // Validação: existe etiqueta nesse cat/padrão?
+    @Query(value = """
+            SELECT COUNT(1)
+              FROM tamanhos t
+             WHERE t.categoria = :categoria
+               AND t.padrao = :padrao
+               AND t.etiqueta = :etiqueta
+            """, nativeQuery = true)
+    int existsEtiqueta(@Param("categoria") String categoria,
+                       @Param("padrao") String padrao,
+                       @Param("etiqueta") String etiqueta);
 }

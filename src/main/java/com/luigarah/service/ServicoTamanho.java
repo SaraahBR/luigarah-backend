@@ -4,7 +4,7 @@ import java.util.List;
 
 public interface ServicoTamanho {
     // catálogo
-    List<String> listarCatalogoPorCategoria(String categoria);
+    List<String> listarCatalogoPorCategoria(String categoria, String padrao);
 
     // por produto
     List<String> listarTamanhosDoProduto(Long produtoId);

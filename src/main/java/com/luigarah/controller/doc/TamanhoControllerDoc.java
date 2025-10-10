@@ -28,6 +28,7 @@ public interface TamanhoControllerDoc {
             description = """
                 Retorna a lista oficial de etiquetas disponíveis para a <b>categoria</b> fornecida.
                 <br>Use-a para popular dropdowns de seleção no frontend.
+                <br>Se informar o <code>padrao</code> (usa|br|sapatos), filtra pelo padrão.
                 """
     )
     @ApiResponses({
@@ -44,7 +45,9 @@ public interface TamanhoControllerDoc {
             @ApiResponse(responseCode = "500", description = "Erro interno.")
     })
     ResponseEntity<RespostaProdutoDTO<List<String>>> listarCatalogoPorCategoria(
-            @Parameter(description = "Categoria (bolsas|roupas|sapatos).", example = "roupas") String categoria
+            @Parameter(description = "Categoria (bolsas|roupas|sapatos).", example = "roupas") String categoria,
+            @Parameter(description = "Padrão (usa|br|sapatos). Opcional; se omitido, retorna todos os padrões da categoria.", example = "usa")
+            String padrao
     );
 
     // ============== VÍNCULO DE TAMANHOS POR PRODUTO ==============
@@ -78,7 +81,7 @@ public interface TamanhoControllerDoc {
             @Parameter(description = "ID do produto.", example = "13") Long id,
             @RequestBody(
                     required = true,
-                    description = "Array de etiquetas válidas para a categoria do produto.",
+                    description = "Array de etiquetas válidas para a categoria/padrão do produto.",
                     content = @Content(mediaType = "application/json",
                             schema = @Schema(implementation = List.class),
                             examples = @ExampleObject(name = "Exemplo de substituição",

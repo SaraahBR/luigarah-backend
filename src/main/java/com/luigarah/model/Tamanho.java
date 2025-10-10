@@ -21,6 +21,16 @@ public class Tamanho {
     @Column(nullable = false, length = 40)
     private String etiqueta;
 
+    // padrão (usa|br|sapatos) — refletindo PADRAO NOT NULL no Oracle
+    @NotBlank
+    @Pattern(regexp = "usa|br|sapatos")
+    @Column(name = "padrao", nullable = false, length = 10)
+    private String padrao;
+
+    // ordem semântica (usa para ordenação no catálogo)
+    @Column(name = "ordem")
+    private Integer ordem;
+
     public Tamanho() {}
 
     public Long getId() { return id; }
@@ -31,4 +41,10 @@ public class Tamanho {
 
     public String getEtiqueta() { return etiqueta; }
     public void setEtiqueta(String etiqueta) { this.etiqueta = etiqueta; }
+
+    public String getPadrao() { return padrao; }
+    public void setPadrao(String padrao) { this.padrao = padrao; }
+
+    public Integer getOrdem() { return ordem; }
+    public void setOrdem(Integer ordem) { this.ordem = ordem; }
 }

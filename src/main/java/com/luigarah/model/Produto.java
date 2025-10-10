@@ -84,7 +84,7 @@ public class Produto {
     @Column(name = "COMPOSICAO", nullable = false)
     private String composicao;
 
-    /** JSON em texto: array de strings. */
+    /** JSON em texto: objeto com medidas. */
     /** Destaques como texto longo (VARCHAR2(16000) no Oracle). */
     @Column(name = "DESTAQUES", length = 16000)
     private String destaques;
@@ -99,6 +99,14 @@ public class Produto {
     @Basic(fetch = FetchType.EAGER)
     @Column(name = "MODELO")
     private String modelo;
+
+    /**
+     * Padrão de tamanho do produto (usa|br|sapatos).
+     * Mapeia a coluna PADRAO_TAMANHO no Oracle (conforme CK_PROD_PADRAO_TAMANHO).
+     */
+    @Pattern(regexp = "usa|br|sapatos", message = "PADRAO_TAMANHO deve ser usa, br ou sapatos")
+    @Column(name = "PADRAO_TAMANHO", length = 10)
+    private String padraoTamanho;
 
     @CreationTimestamp
     @Column(name = "DATA_CRIACAO", nullable = false, updatable = false)
@@ -194,6 +202,13 @@ public class Produto {
 
     public String getModelo() { return modelo; }
     public void setModelo(String modelo) { this.modelo = cleanText(modelo); }
+
+    public String getPadraoTamanho() { return padraoTamanho; }
+    public void setPadraoTamanho(String padraoTamanho) {
+        // mantém sanitização simples; se quiser normalizar para minúsculas, descomente a linha abaixo
+        // this.padraoTamanho = cleanText(padraoTamanho == null ? null : padraoTamanho.toLowerCase());
+        this.padraoTamanho = cleanText(padraoTamanho);
+    }
 
     public LocalDateTime getDataCriacao() { return dataCriacao; }
     public void setDataCriacao(LocalDateTime dataCriacao) { this.dataCriacao = dataCriacao; }

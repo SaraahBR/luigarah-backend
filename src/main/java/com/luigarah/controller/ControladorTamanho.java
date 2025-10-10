@@ -23,18 +23,21 @@ public class ControladorTamanho implements TamanhoControllerDoc {
         this.servico = servico;
     }
 
-    // catálogo
+    // catálogo (com padrao opcional)
     @GetMapping("/tamanhos")
     @Override
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Catálogo retornado."),
-            @ApiResponse(responseCode = "400", description = "Categoria inválida.",
+            @ApiResponse(responseCode = "400", description = "Categoria/Padrão inválido.",
                     content = @Content(mediaType = "application/json",
                             examples = @ExampleObject(value = "{\"sucesso\":false,\"mensagem\":\"Categoria inválida. Use: bolsas, roupas ou sapatos\"}")))
     })
-    public ResponseEntity<RespostaProdutoDTO<List<String>>> listarCatalogoPorCategoria(@RequestParam String categoria) {
+    public ResponseEntity<RespostaProdutoDTO<List<String>>> listarCatalogoPorCategoria(
+            @RequestParam String categoria,
+            @RequestParam(required = false) String padrao
+    ) {
         try {
-            List<String> lista = servico.listarCatalogoPorCategoria(categoria);
+            List<String> lista = servico.listarCatalogoPorCategoria(categoria, padrao);
             return ResponseEntity.ok(RespostaProdutoDTO.sucesso(lista, "Catálogo de tamanhos encontrado"));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(RespostaProdutoDTO.erro(e.getMessage()));

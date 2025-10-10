@@ -31,9 +31,13 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
     // UTILIDADES
     // ---------------------------------------------------------------------
 
-    /** Retorna a categoria do produto (útil para rotinas que dependem da categoria). */
+    /** Categoria do produto (roupas|sapatos|bolsas). */
     @Query("select p.categoria from Produto p where p.id = :produtoId")
     String obterCategoriaDoProduto(@Param("produtoId") Long produtoId);
+
+    /** Padrão de tamanho do produto (usa|br|sapatos) — coluna PADRAO_TAMANHO. */
+    @Query("select p.padraoTamanho from Produto p where p.id = :produtoId")
+    String obterPadraoTamanhoProduto(@Param("produtoId") Long produtoId);
 
     // ---------------------------------------------------------------------
     // ESTOQUE POR PRODUTO (bolsas = sem tamanho)
@@ -124,20 +128,20 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
 
     // ---------------------------------------------------------------------
     // DIMENSÃO (Grande, Médio, Média, Pequena, Mini, ...)
-    // Mantém filtros simples e por categoria.
     // ---------------------------------------------------------------------
 
-    /** Busca global por dimensão (case-insensitive). */
     Page<Produto> findByDimensaoIgnoreCase(String dimensao, Pageable pageable);
 
-    /** Busca por categoria + dimensão (case-insensitive). */
     Page<Produto> findByCategoriaAndDimensaoIgnoreCase(String categoria, String dimensao, Pageable pageable);
 
     // ---------------------------------------------------------------------
     // CATÁLOGO DE TAMANHOS
     // ---------------------------------------------------------------------
 
-    /** Lista o catálogo de etiquetas de tamanho para uma categoria, respeitando ORDEM. */
+    /**
+     * LEGADO: Lista catálogo por categoria (sem filtrar padrao).
+     * Mantido para compatibilidade. Prefira o método com parâmetro padrao.
+     */
     @Query(value = """
             SELECT t.etiqueta
               FROM tamanhos t
@@ -146,9 +150,19 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
             """, nativeQuery = true)
     List<String> listarCatalogoEtiquetas(@Param("categoria") String categoria);
 
+    /** Lista catálogo por categoria com PADRÃO opcional (usa|br|sapatos). */
+    @Query(value = """
+            SELECT t.etiqueta
+              FROM tamanhos t
+             WHERE t.categoria = :categoria
+               AND (:padrao IS NULL OR t.padrao = :padrao)
+             ORDER BY t.ordem NULLS FIRST, t.etiqueta
+            """, nativeQuery = true)
+    List<String> listarCatalogoEtiquetas(@Param("categoria") String categoria,
+                                         @Param("padrao") String padrao);
+
     // ---------------------------------------------------------------------
     // PRODUTOS POR CATEGORIA + ETIQUETA (TAMANHO)
-    // Tabelas: produtos, produtos_tamanhos(produto_id,tamanho_id,qtd_estoque), tamanhos(id,etiqueta,...)
     // ---------------------------------------------------------------------
 
     /** Filtra roupas/sapatos por etiqueta de tamanho (somente com estoque > 0). */
@@ -198,6 +212,7 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
      * Insere um vínculo produto+tamanho (se existir no catálogo da mesma categoria)
      * com uma quantidade inicial de estoque.
      * Ignora duplicidade (NOT EXISTS).
+     * Obs.: Validação de PADRÃO é feita no serviço antes de chamar este método.
      */
     @Modifying
     @Query(value = """
