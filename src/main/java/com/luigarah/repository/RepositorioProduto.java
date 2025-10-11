@@ -210,9 +210,8 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
 
     /**
      * Insere um vínculo produto+tamanho (se existir no catálogo da mesma categoria)
-     * com uma quantidade inicial de estoque.
-     * Ignora duplicidade (NOT EXISTS).
-     * Obs.: Validação de PADRÃO é feita no serviço antes de chamar este método.
+     * com uma quantidade inicial de estoque. Ignora duplicidade (NOT EXISTS).
+     * AGORA com filtro pelo PADRÃO do produto para diferenciar BR vs USA.
      */
     @Modifying
     @Query(value = """
@@ -221,8 +220,9 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
                    t.id,
                    :qtd
               FROM tamanhos t
-             WHERE t.etiqueta = :etiqueta
-               AND t.categoria = (SELECT categoria FROM produtos WHERE id = :produtoId)
+             WHERE t.etiqueta  = :etiqueta
+               AND t.categoria = (SELECT categoria       FROM produtos WHERE id = :produtoId)
+               AND t.padrao    = (SELECT padrao_tamanho  FROM produtos WHERE id = :produtoId)
                AND NOT EXISTS (
                    SELECT 1 FROM produtos_tamanhos x
                     WHERE x.produto_id = :produtoId
@@ -233,15 +233,16 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
                         @Param("etiqueta") String etiqueta,
                         @Param("qtd") int qtdEstoqueInicial);
 
-    /** Remove UMA etiqueta específica do produto. Retorna nº de linhas afetadas. */
+    /** Remove UMA etiqueta específica do produto. Retorna nº de linhas afetadas. (agora também filtra por padrão) */
     @Modifying
     @Query(value = """
             DELETE FROM produtos_tamanhos
              WHERE produto_id = :produtoId
                AND tamanho_id = (
                    SELECT id FROM tamanhos
-                    WHERE etiqueta = :etiqueta
-                      AND categoria = (SELECT categoria FROM produtos WHERE id = :produtoId)
+                    WHERE etiqueta  = :etiqueta
+                      AND categoria = (SELECT categoria       FROM produtos WHERE id = :produtoId)
+                      AND padrao    = (SELECT padrao_tamanho  FROM produtos WHERE id = :produtoId)
                )
             """, nativeQuery = true)
     int removerTamanho(@Param("produtoId") Long produtoId, @Param("etiqueta") String etiqueta);
@@ -260,7 +261,10 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
             """, nativeQuery = true)
     List<Object[]> listarEstoquePorProduto(@Param("produtoId") Long produtoId);
 
-    /** Upsert de quantidade por etiqueta para o produto (cria o vínculo se necessário). */
+    /**
+     * Upsert de quantidade por etiqueta para o produto (cria o vínculo se necessário).
+     * AGORA garantindo que buscamos o tamanho pelo mesmo PADRÃO do produto.
+     */
     @Modifying
     @Query(value = """
             MERGE INTO produtos_tamanhos pt
@@ -269,8 +273,9 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
                        t.id      AS tamanho_id,
                        :qtd      AS qtd
                   FROM tamanhos t
-                 WHERE t.etiqueta = :etiqueta
-                   AND t.categoria = (SELECT categoria FROM produtos WHERE id = :produtoId)
+                 WHERE t.etiqueta  = :etiqueta
+                   AND t.categoria = (SELECT categoria       FROM produtos WHERE id = :produtoId)
+                   AND t.padrao    = (SELECT padrao_tamanho  FROM produtos WHERE id = :produtoId)
             ) x
             ON (pt.produto_id = x.produto_id AND pt.tamanho_id = x.tamanho_id)
             WHEN MATCHED THEN UPDATE SET pt.qtd_estoque = x.qtd
@@ -281,7 +286,10 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
                                   @Param("etiqueta") String etiqueta,
                                   @Param("qtd") int qtd);
 
-    /** Incrementa/decrementa a quantidade para uma etiqueta específica do produto. */
+    /**
+     * Incrementa/decrementa a quantidade para uma etiqueta específica do produto.
+     * AGORA garantindo que identificamos o tamanho pelo PADRÃO do produto.
+     */
     @Modifying
     @Query(value = """
             UPDATE produtos_tamanhos pt
@@ -289,8 +297,9 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
              WHERE pt.produto_id = :produtoId
                AND pt.tamanho_id = (
                  SELECT id FROM tamanhos
-                  WHERE etiqueta = :etiqueta
-                    AND categoria = (SELECT categoria FROM produtos WHERE id = :produtoId)
+                  WHERE etiqueta  = :etiqueta
+                    AND categoria = (SELECT categoria       FROM produtos WHERE id = :produtoId)
+                    AND padrao    = (SELECT padrao_tamanho  FROM produtos WHERE id = :produtoId)
                )
             """, nativeQuery = true)
     int incrementarEstoquePorEtiqueta(@Param("produtoId") Long produtoId,
