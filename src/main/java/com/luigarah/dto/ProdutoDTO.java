@@ -91,6 +91,9 @@ public class ProdutoDTO {
     @Schema(description = "Data da última atualização do produto")
     private LocalDateTime dataAtualizacao;
 
+    @Schema(description = "Identidade do produto (Masculino, Feminino, Unissex, Infantil)")
+    private IdentidadeDTO identidade;
+
     public ProdutoDTO() {}
 
     public ProdutoDTO(String titulo, String subtitulo, String autor, String descricao,
@@ -189,4 +192,7 @@ public class ProdutoDTO {
 
     public LocalDateTime getDataAtualizacao() { return dataAtualizacao; }
     public void setDataAtualizacao(LocalDateTime dataAtualizacao) { this.dataAtualizacao = dataAtualizacao; }
+
+    public IdentidadeDTO getIdentidade() { return identidade; }
+    public void setIdentidade(IdentidadeDTO identidade) { this.identidade = identidade; }
 }

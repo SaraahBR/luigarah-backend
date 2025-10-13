@@ -108,6 +108,10 @@ public class Produto {
     @Column(name = "PADRAO_TAMANHO", length = 10)
     private String padraoTamanho;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "IDENTIDADE_ID")
+    private Identidade identidade;
+
     @CreationTimestamp
     @Column(name = "DATA_CRIACAO", nullable = false, updatable = false)
     private LocalDateTime dataCriacao;
@@ -209,6 +213,9 @@ public class Produto {
         // this.padraoTamanho = cleanText(padraoTamanho == null ? null : padraoTamanho.toLowerCase());
         this.padraoTamanho = cleanText(padraoTamanho);
     }
+
+    public Identidade getIdentidade() { return identidade; }
+    public void setIdentidade(Identidade identidade) { this.identidade = identidade; }
 
     public LocalDateTime getDataCriacao() { return dataCriacao; }
     public void setDataCriacao(LocalDateTime dataCriacao) { this.dataCriacao = dataCriacao; }

@@ -305,4 +305,28 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
     int incrementarEstoquePorEtiqueta(@Param("produtoId") Long produtoId,
                                       @Param("etiqueta") String etiqueta,
                                       @Param("delta") int delta);
+
+    // ---------------------------------------------------------------------
+    // BUSCAS POR IDENTIDADE
+    // ---------------------------------------------------------------------
+
+    /** Busca todos os produtos que possuem identidade */
+    List<Produto> findByIdentidadeIsNotNull();
+
+    /** Busca todos os produtos que não possuem identidade */
+    List<Produto> findByIdentidadeIsNull();
+
+    /** Busca produtos por ID da identidade */
+    List<Produto> findByIdentidadeId(Long identidadeId);
+
+    /** Busca produtos por ID da identidade com paginação */
+    Page<Produto> findByIdentidadeId(Long identidadeId, Pageable pageable);
+
+    /** Busca produtos por código da identidade */
+    @Query("SELECT p FROM Produto p WHERE p.identidade.codigo = :codigo")
+    List<Produto> findByIdentidadeCodigo(@Param("codigo") String codigo);
+
+    /** Busca produtos por código da identidade com paginação */
+    @Query("SELECT p FROM Produto p WHERE p.identidade.codigo = :codigo")
+    Page<Produto> findByIdentidadeCodigo(@Param("codigo") String codigo, Pageable pageable);
 }
