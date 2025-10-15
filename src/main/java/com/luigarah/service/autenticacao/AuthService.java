@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +40,9 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final UsuarioMapper usuarioMapper;
     private final OAuthProviderRepository oAuthProviderRepository;
+
+    // Map para controlar locks por email (evita race condition)
+    private final ConcurrentHashMap<String, Object> emailLocks = new ConcurrentHashMap<>();
 
     @Transactional
     public AuthResponseDTO login(LoginRequestDTO loginRequest) {
@@ -176,6 +180,23 @@ public class AuthService {
     public AuthResponseDTO syncOAuth(OAuthSyncRequest request) {
         log.info("Sincronizando conta OAuth - Provider: {}, Email: {}", request.getProvider(), request.getEmail());
 
+        // Obtém ou cria um lock específico para este email
+        Object lock = emailLocks.computeIfAbsent(request.getEmail(), k -> new Object());
+
+        try {
+            synchronized (lock) {
+                return executeSyncOAuth(request);
+            }
+        } finally {
+            // Remove o lock se não houver mais threads aguardando
+            emailLocks.remove(request.getEmail());
+        }
+    }
+
+    /**
+     * Execução sincronizada do sync OAuth
+     */
+    private AuthResponseDTO executeSyncOAuth(OAuthSyncRequest request) {
         // 1. Busca usuário por e-mail
         Usuario usuario;
         boolean isNewUser = false;
