@@ -55,7 +55,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                // ✅ CORREÇÃO: Usar a configuração CORS injetada corretamente
+                // ✅ CORREÇÃO: Usar CORS uma única vez, evitando duplicação
                 .cors(cors -> cors.configurationSource(fonteCorsConfiguration))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
@@ -69,11 +69,11 @@ public class SecurityConfig {
                         // ✅ Home público
                         .requestMatchers("/", "/home").permitAll()
 
-                        // ✅ PRODUTOS - Leitura pública (QUALQUER PESSOA PODE VER)
+                        // ✅ PRODUTOS - Leitura pública (com e sem /api)
                         .requestMatchers(HttpMethod.GET, "/api/produtos/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/produtos/**").permitAll()
 
-                        // ✅ CATEGORIAS - Leitura pública (CORREÇÃO DO ERRO 403)
+                        // ✅ CATEGORIAS - Leitura pública
                         .requestMatchers(HttpMethod.GET, "/api/categorias/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/categorias/**").permitAll()
 
@@ -141,9 +141,12 @@ public class SecurityConfig {
                         .requestMatchers("/api/usuario/**").authenticated()
 
                         // 🔒 ADMIN - Apenas ADMIN
-                        .requestMatchers("/api/admin/**").authenticated()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                        // 🔒 Todos os outros endpoints requerem autenticação
+                        // ✅ PERMITIR todos os outros GETs públicos (para evitar NoResourceFoundException)
+                        .requestMatchers(HttpMethod.GET, "/**").permitAll()
+
+                        // 🔒 Todos os outros métodos requerem autenticação
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())

@@ -23,6 +23,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -301,11 +302,18 @@ public class AuthService {
      * Gera token JWT para um usuário com suas roles corretas
      */
     private String generateTokenForUser(Usuario usuario) {
-        // Cria um Authentication object temporário com as authorities do usuário
-        Authentication auth = new UsernamePasswordAuthenticationToken(
+        // ✅ CORREÇÃO: Criar um UserDetails a partir do Usuario, não passar String
+        UserDetails userDetails = new org.springframework.security.core.userdetails.User(
                 usuario.getEmail(),
+                usuario.getSenha() != null ? usuario.getSenha() : "",
+                usuario.getAuthorities()
+        );
+
+        // Cria um Authentication object com UserDetails como principal
+        Authentication auth = new UsernamePasswordAuthenticationToken(
+                userDetails,
                 null,
-                new java.util.ArrayList<>(usuario.getAuthorities())
+                usuario.getAuthorities()
         );
 
         return tokenProvider.generateToken(auth);
