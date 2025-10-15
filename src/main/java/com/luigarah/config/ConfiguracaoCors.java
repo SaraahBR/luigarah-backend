@@ -7,6 +7,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.Arrays;
@@ -28,6 +29,16 @@ public class ConfiguracaoCors implements WebMvcConfigurer {
                 .allowCredentials(true)
                 .exposedHeaders("Authorization", "Content-Type", "X-Total-Count")
                 .maxAge(3600);
+    }
+
+    /**
+     * ✅ CORREÇÃO CRÍTICA: Configurar PathMatcher para NÃO tratar /produtos/* como recurso estático
+     * Isso evita o erro NoResourceFoundException: No static resource produtos/categoria/roupas
+     */
+    @Override
+    public void configurePathMatch(PathMatchConfigurer configurer) {
+        // Garante que trailing slashes sejam tratados corretamente
+        configurer.setUseTrailingSlashMatch(true);
     }
 
     @Bean
