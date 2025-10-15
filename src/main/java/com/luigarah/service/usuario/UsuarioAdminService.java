@@ -1,12 +1,16 @@
 package com.luigarah.service.usuario;
 
+import com.luigarah.dto.usuario.EnderecoDTO;
 import com.luigarah.dto.usuario.UsuarioAdminDTO;
 import com.luigarah.dto.usuario.UsuarioAdminUpdateDTO;
 import com.luigarah.exception.RecursoNaoEncontradoException;
 import com.luigarah.exception.RegraDeNegocioException;
+import com.luigarah.mapper.usuario.EnderecoMapper;
 import com.luigarah.mapper.usuario.UsuarioMapper;
 import com.luigarah.model.autenticacao.Role;
 import com.luigarah.model.autenticacao.Usuario;
+import com.luigarah.model.usuario.Endereco;
+import com.luigarah.repository.autenticacao.EnderecoRepository;
 import com.luigarah.repository.autenticacao.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -29,6 +34,8 @@ public class UsuarioAdminService {
 
     private final UsuarioRepository usuarioRepository;
     private final UsuarioMapper usuarioMapper;
+    private final EnderecoRepository enderecoRepository;
+    private final EnderecoMapper enderecoMapper;
 
     /**
      * Lista todos os usuários (sem dados sensíveis - LGPD)
@@ -108,7 +115,7 @@ public class UsuarioAdminService {
 
     /**
      * Atualiza dados do usuário (apenas campos permitidos)
-     * ADMIN pode alterar: nome, sobrenome, email, telefone, role
+     * ADMIN pode alterar: nome, sobrenome, email, telefone, role, endereços
      * ADMIN NÃO pode alterar: senha, documentos, dados sensíveis
      */
     @Transactional
@@ -149,10 +156,56 @@ public class UsuarioAdminService {
             }
         }
 
+        // Atualizar endereços se fornecidos
+        if (updateDTO.getEnderecos() != null) {
+            atualizarEnderecos(usuario, updateDTO.getEnderecos());
+        }
+
         usuario = usuarioRepository.save(usuario);
         log.info("Usuário atualizado com sucesso: ID {}", id);
 
         return usuarioMapper.toAdminDTO(usuario);
+    }
+
+    /**
+     * Atualiza os endereços do usuário
+     * Remove endereços antigos e adiciona os novos
+     */
+    private void atualizarEnderecos(Usuario usuario, List<EnderecoDTO> enderecosDTO) {
+        log.info("Atualizando endereços do usuário ID: {}", usuario.getId());
+
+        // Remove todos os endereços antigos
+        enderecoRepository.deleteByUsuarioId(usuario.getId());
+        enderecoRepository.flush();
+
+        // Adiciona os novos endereços
+        if (enderecosDTO != null && !enderecosDTO.isEmpty()) {
+            List<Endereco> novosEnderecos = new ArrayList<>();
+            boolean temPrincipal = false;
+
+            for (EnderecoDTO dto : enderecosDTO) {
+                Endereco endereco = enderecoMapper.toEntity(dto);
+                endereco.setUsuario(usuario);
+
+                // Garante que apenas um endereço seja principal
+                if (dto.getPrincipal() != null && dto.getPrincipal() && !temPrincipal) {
+                    endereco.setPrincipal(true);
+                    temPrincipal = true;
+                } else {
+                    endereco.setPrincipal(false);
+                }
+
+                novosEnderecos.add(endereco);
+            }
+
+            // Se nenhum foi marcado como principal, marca o primeiro
+            if (!temPrincipal && !novosEnderecos.isEmpty()) {
+                novosEnderecos.get(0).setPrincipal(true);
+            }
+
+            enderecoRepository.saveAll(novosEnderecos);
+            log.info("Endereços atualizados com sucesso para o usuário ID: {}", usuario.getId());
+        }
     }
 
     /**
@@ -220,4 +273,3 @@ public class UsuarioAdminService {
         return usuarioRepository.countByRole(role);
     }
 }
-

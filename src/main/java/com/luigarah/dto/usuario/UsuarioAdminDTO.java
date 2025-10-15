@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * DTO para visualização de usuário pelo ADMIN
@@ -52,6 +53,9 @@ public class UsuarioAdminDTO {
 
     @Schema(description = "Provedor de autenticação", example = "LOCAL")
     private String provider;
+
+    @Schema(description = "Lista de endereços do usuário")
+    private List<EnderecoDTO> enderecos;
 
     // DADOS SENSÍVEIS NÃO INCLUÍDOS (LGPD):
     // - senha (nunca exposta)

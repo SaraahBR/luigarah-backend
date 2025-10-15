@@ -1,10 +1,13 @@
 package com.luigarah.dto.usuario;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+
+import java.util.List;
 
 /**
  * DTO para atualização de usuário pelo ADMIN
@@ -39,6 +42,10 @@ public class UsuarioAdminUpdateDTO {
     @Schema(description = "Papel do usuário (USER/ADMIN)", example = "USER")
     private String role;
 
+    @Valid
+    @Schema(description = "Lista de endereços do usuário (opcional)")
+    private List<EnderecoDTO> enderecos;
+
     // ADMIN NÃO PODE ALTERAR (conforme requisitos de segurança):
     // - senha (usuário altera a própria senha)
     // - documentos
@@ -46,4 +53,3 @@ public class UsuarioAdminUpdateDTO {
     // - provider (LOCAL/GOOGLE/FACEBOOK)
     // - emailVerificado (processo automático)
 }
-

@@ -59,6 +59,7 @@ public class UsuarioMapper {
                 .ativo(usuario.getAtivo())
                 .emailVerificado(usuario.getEmailVerificado())
                 .provider(usuario.getProvider() != null ? usuario.getProvider().name() : null)
+                .enderecos(enderecoMapper.toDTOList(usuario.getEnderecos()))
                 .build();
     }
 }
