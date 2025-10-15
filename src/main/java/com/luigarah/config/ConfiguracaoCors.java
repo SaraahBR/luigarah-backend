@@ -6,7 +6,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -20,17 +19,6 @@ public class ConfiguracaoCors implements WebMvcConfigurer {
     @Value("${app.cors.origens-permitidas}")
     private String origensPermitidas;
 
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**")
-                .allowedOriginPatterns(getOrigensComWildcard())
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
-                .allowedHeaders("*")
-                .allowCredentials(true)
-                .exposedHeaders("Authorization", "Content-Type", "X-Total-Count")
-                .maxAge(3600);
-    }
-
     /**
      * ✅ CORREÇÃO CRÍTICA: Configurar PathMatcher para NÃO tratar /produtos/* como recurso estático
      * Isso evita o erro NoResourceFoundException: No static resource produtos/categoria/roupas
@@ -41,6 +29,10 @@ public class ConfiguracaoCors implements WebMvcConfigurer {
         configurer.setUseTrailingSlashMatch(true);
     }
 
+    /**
+     * ✅ CONFIGURAÇÃO CORS ÚNICA - Evita duplicação de headers
+     * Esta é a ÚNICA configuração CORS do projeto
+     */
     @Bean
     public CorsConfigurationSource fonteCorsConfiguration() {
         CorsConfiguration configuracao = new CorsConfiguration();
