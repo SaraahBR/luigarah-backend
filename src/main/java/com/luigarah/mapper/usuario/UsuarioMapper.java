@@ -3,10 +3,14 @@ package com.luigarah.mapper.usuario;
 import com.luigarah.dto.usuario.UsuarioAdminDTO;
 import com.luigarah.dto.usuario.UsuarioDTO;
 import com.luigarah.model.autenticacao.Usuario;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class UsuarioMapper {
+
+    private final EnderecoMapper enderecoMapper;
 
     public UsuarioDTO toDTO(Usuario usuario) {
         if (usuario == null) {
@@ -29,6 +33,7 @@ public class UsuarioMapper {
                 .dataCriacao(usuario.getDataCriacao())
                 .dataAtualizacao(usuario.getDataAtualizacao())
                 .ultimoAcesso(usuario.getUltimoAcesso())
+                .enderecos(enderecoMapper.toDTOList(usuario.getEnderecos()))
                 .build();
     }
 
@@ -49,6 +54,7 @@ public class UsuarioMapper {
                 .telefone(usuario.getTelefone())
                 .dataNascimento(usuario.getDataNascimento())
                 .genero(usuario.getGenero())
+                .fotoUrl(usuario.getFotoUrl())
                 .role(usuario.getRole() != null ? usuario.getRole().name() : null)
                 .ativo(usuario.getAtivo())
                 .emailVerificado(usuario.getEmailVerificado())

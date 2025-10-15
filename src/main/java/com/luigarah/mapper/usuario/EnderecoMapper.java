@@ -4,6 +4,9 @@ import com.luigarah.dto.usuario.EnderecoDTO;
 import com.luigarah.model.usuario.Endereco;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Component
 public class EnderecoMapper {
 
@@ -23,9 +26,16 @@ public class EnderecoMapper {
                 .numero(endereco.getNumero())
                 .complemento(endereco.getComplemento())
                 .principal(endereco.getPrincipal())
-                .dataCriacao(endereco.getDataCriacao())
-                .dataAtualizacao(endereco.getDataAtualizacao())
                 .build();
+    }
+
+    public List<EnderecoDTO> toDTOList(List<Endereco> enderecos) {
+        if (enderecos == null) {
+            return null;
+        }
+        return enderecos.stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
     }
 
     public Endereco toEntity(EnderecoDTO dto) {
@@ -47,3 +57,4 @@ public class EnderecoMapper {
                 .build();
     }
 }
+

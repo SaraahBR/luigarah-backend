@@ -38,6 +38,9 @@ public class UsuarioAdminDTO {
     @Schema(description = "Gênero do usuário", example = "Masculino")
     private String genero;
 
+    @Schema(description = "URL da foto de perfil", example = "https://lh3.googleusercontent.com/a/...")
+    private String fotoUrl;
+
     @Schema(description = "Papel do usuário no sistema", example = "USER")
     private String role;
 
@@ -56,4 +59,3 @@ public class UsuarioAdminDTO {
     // - dados bancários
     // - informações médicas
 }
-

@@ -6,12 +6,14 @@ import io.jsonwebtoken.security.SignatureException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.stream.Collectors;
 
 /**
  * Utilitário para geração e validação de tokens JWT.
@@ -31,18 +33,33 @@ public class JwtTokenProvider {
      */
     public String generateToken(Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        return generateTokenFromUsername(userDetails.getUsername());
+
+        // Extrai as roles/authorities do usuário
+        String roles = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.joining(","));
+
+        return generateTokenFromUsernameAndRoles(userDetails.getUsername(), roles);
     }
 
     /**
      * Gera um token JWT a partir do username (email).
      */
     public String generateTokenFromUsername(String username) {
+        // Por padrão, atribui role USER se não especificado
+        return generateTokenFromUsernameAndRoles(username, "ROLE_USER");
+    }
+
+    /**
+     * Gera um token JWT a partir do username e roles.
+     */
+    private String generateTokenFromUsernameAndRoles(String username, String roles) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
 
         return Jwts.builder()
                 .setSubject(username)
+                .claim("roles", roles)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
@@ -60,6 +77,19 @@ public class JwtTokenProvider {
                 .getBody();
 
         return claims.getSubject();
+    }
+
+    /**
+     * Extrai as roles do token JWT.
+     */
+    public String getRolesFromToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
+        return claims.get("roles", String.class);
     }
 
     /**
@@ -94,4 +124,3 @@ public class JwtTokenProvider {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }
-

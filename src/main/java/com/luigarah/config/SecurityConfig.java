@@ -24,7 +24,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  */
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -56,7 +56,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configure(http))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Endpoints públicos
+                        // Endpoints públicos - DEVEM VIR PRIMEIRO
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/oauth2/**").permitAll()
 
@@ -99,6 +99,9 @@ public class SecurityConfig {
 
                         // Perfil de usuário - apenas usuários autenticados
                         .requestMatchers("/api/usuario/**").authenticated()
+
+                        // Endpoints de administração - apenas autenticado (o @PreAuthorize vai checar se é ADMIN)
+                        .requestMatchers("/api/admin/**").authenticated()
 
                         // Todos os outros endpoints requerem autenticação
                         .anyRequest().authenticated()

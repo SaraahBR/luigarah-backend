@@ -44,4 +44,8 @@ public class RegistroRequestDTO {
     @Size(max = 20, message = "Gênero deve ter no máximo 20 caracteres")
     @Schema(description = "Gênero do usuário", example = "Feminino", maxLength = 20)
     private String genero;
+
+    @Size(max = 500, message = "URL da foto deve ter no máximo 500 caracteres")
+    @Schema(description = "URL da foto de perfil", example = "https://lh3.googleusercontent.com/a/...", maxLength = 500)
+    private String fotoUrl;
 }

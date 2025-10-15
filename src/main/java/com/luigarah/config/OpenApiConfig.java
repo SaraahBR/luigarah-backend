@@ -24,14 +24,14 @@ public class OpenApiConfig {
                 .url("/")
                 .description("Servidor Atual (Render ou Localhost)");
 
-        // Configuração de segurança JWT
-        String securitySchemeName = "bearerAuth";
+        // Configuração de segurança JWT - NOME DEVE BATER COM @SecurityRequirement nos controllers
+        String securitySchemeName = "bearer-key";  // <<<< MUDOU DE "bearerAuth" para "bearer-key"
         SecurityScheme securityScheme = new SecurityScheme()
                 .name(securitySchemeName)
                 .type(SecurityScheme.Type.HTTP)
                 .scheme("bearer")
                 .bearerFormat("JWT")
-                .description("Insira o token JWT obtido no login. Formato: Bearer {token}");
+                .description("Insira o token JWT obtido no login (sem o prefixo 'Bearer')");
 
         SecurityRequirement securityRequirement = new SecurityRequirement()
                 .addList(securitySchemeName);
@@ -39,7 +39,7 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .servers(List.of(sameOrigin))
                 .components(new Components().addSecuritySchemes(securitySchemeName, securityScheme))
-                .addSecurityItem(securityRequirement)
+                .addSecurityItem(securityRequirement)  // Aplica segurança globalmente
                 .info(new Info()
                         .title("API Luigarah")
                         .version("1.0.0")
@@ -51,10 +51,11 @@ public class OpenApiConfig {
                                 
                                 ### Como usar:
                                 1. Faça login em `/api/auth/login` ou registre-se em `/api/auth/registrar`
-                                2. Copie o token JWT retornado
+                                2. Copie o token JWT retornado (começa com 'eyJ...')
                                 3. Clique no botão **Authorize** (🔒) no topo desta página
-                                4. Cole o token no campo (sem o prefixo "Bearer")
+                                4. Cole o token COMPLETO no campo
                                 5. Clique em **Authorize** e depois **Close**
+                                6. Agora todos os endpoints protegidos terão um cadeado fechado 🔒
                                 
                                 ### Roles (Papéis):
                                 - **USER**: Usuário comum - pode visualizar produtos, gerenciar carrinho e lista de desejos

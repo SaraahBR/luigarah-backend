@@ -35,18 +35,34 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String jwt = getJwtFromRequest(request);
 
-            if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
-                String username = tokenProvider.getUsernameFromToken(jwt);
+            if (StringUtils.hasText(jwt)) {
+                log.debug("Token JWT encontrado para URI: {}", request.getRequestURI());
 
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                if (tokenProvider.validateToken(jwt)) {
+                    String username = tokenProvider.getUsernameFromToken(jwt);
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    log.info("=== JWT FILTER - AUTENTICAÇÃO VÁLIDA ===");
+                    log.info("Request URI: {}", request.getRequestURI());
+                    log.info("Usuário: {}", username);
+                    log.info("Authorities: {}", userDetails.getAuthorities());
+
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    log.info("Authentication setado com sucesso");
+                    log.info("==========================================");
+                } else {
+                    log.error("Token JWT INVÁLIDO para URI: {} - Token será rejeitado", request.getRequestURI());
+                    log.error("Token fornecido: {}", jwt.substring(0, Math.min(20, jwt.length())) + "...");
+                }
+            } else {
+                log.debug("Nenhum token JWT fornecido para URI: {}", request.getRequestURI());
             }
         } catch (Exception ex) {
-            log.error("Could not set user authentication in security context", ex);
+            log.error("Erro ao processar autenticação JWT para URI: {}", request.getRequestURI(), ex);
         }
 
         filterChain.doFilter(request, response);
@@ -63,4 +79,3 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return null;
     }
 }
-

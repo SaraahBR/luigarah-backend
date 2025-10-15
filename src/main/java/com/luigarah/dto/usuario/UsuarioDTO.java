@@ -60,4 +60,7 @@ public class UsuarioDTO {
 
     @Schema(description = "Data do último acesso", accessMode = Schema.AccessMode.READ_ONLY)
     private LocalDateTime ultimoAcesso;
+
+    @Schema(description = "Lista de endereços do usuário")
+    private java.util.List<EnderecoDTO> enderecos;
 }

@@ -86,6 +86,7 @@ public class AuthService {
                 .telefone(registroRequest.getTelefone())
                 .dataNascimento(registroRequest.getDataNascimento())
                 .genero(registroRequest.getGenero())
+                .fotoUrl(registroRequest.getFotoUrl())
                 .role(Role.USER)
                 .ativo(true)
                 .emailVerificado(false)
@@ -94,7 +95,8 @@ public class AuthService {
 
         usuario = usuarioRepository.save(usuario);
 
-        String token = tokenProvider.generateTokenFromUsername(usuario.getEmail());
+        // Gera token com as authorities corretas do usuário
+        String token = generateTokenForUser(usuario);
 
         UsuarioDTO usuarioDTO = usuarioMapper.toDTO(usuario);
 
@@ -140,6 +142,11 @@ public class AuthService {
         usuario.setTelefone(updateRequest.getTelefone());
         usuario.setDataNascimento(updateRequest.getDataNascimento());
         usuario.setGenero(updateRequest.getGenero());
+
+        // Atualiza foto de perfil se fornecida
+        if (updateRequest.getFotoUrl() != null && !updateRequest.getFotoUrl().isBlank()) {
+            usuario.setFotoUrl(updateRequest.getFotoUrl());
+        }
 
         if (updateRequest.getSenha() != null && !updateRequest.getSenha().isBlank()) {
             usuario.setSenha(passwordEncoder.encode(updateRequest.getSenha()));
@@ -273,8 +280,8 @@ public class AuthService {
         usuario.setUltimoAcesso(LocalDateTime.now());
         usuario = usuarioRepository.save(usuario);
 
-        // 4. Gera token JWT
-        String token = tokenProvider.generateTokenFromUsername(usuario.getEmail());
+        // 4. Gera token JWT com as authorities corretas do usuário
+        String token = generateTokenForUser(usuario);
 
         // 5. Converte para DTO
         UsuarioDTO usuarioDTO = usuarioMapper.toDTO(usuario);
@@ -287,6 +294,20 @@ public class AuthService {
                 .tipo("Bearer")
                 .usuario(usuarioDTO)
                 .build();
+    }
+
+    /**
+     * Gera token JWT para um usuário com suas roles corretas
+     */
+    private String generateTokenForUser(Usuario usuario) {
+        // Cria um Authentication object temporário com as authorities do usuário
+        Authentication auth = new UsernamePasswordAuthenticationToken(
+                usuario.getEmail(),
+                null,
+                new java.util.ArrayList<>(usuario.getAuthorities())
+        );
+
+        return tokenProvider.generateToken(auth);
     }
 
     /**
