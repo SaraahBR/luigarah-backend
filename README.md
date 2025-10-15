@@ -1429,7 +1429,7 @@ Este projeto está sob a licença **MIT**. Veja o arquivo [LICENSE](LICENSE) par
 
 ## 📧 Contato e Suporte
 
-- **Email:** dev@luigarah.com
+- **Email:** contato@luigarah.com
 - **Website:** https://luigarah.vercel.app
 - **API Docs:** https://luigarah-backend.onrender.com/swagger-ui/index.html
 
@@ -1460,12 +1460,12 @@ Este projeto está sob a licença **MIT**. Veja o arquivo [LICENSE](LICENSE) par
 
 <div align="center">
 
-**Desenvolvido com ❤️ por Sarah Hernandes**
+**Desenvolvido com ❤️ pela Equipe Luigarah**
 
 **Luigarah - Sistema Seguro, Modular e Escalável**
 
 **Conformidade total com LGPD**
 
-📅 **Última atualização:** 14 de Outubro de 2025
+📅 **Última atualização:** 15 de Outubro de 2025
 
 </div>
