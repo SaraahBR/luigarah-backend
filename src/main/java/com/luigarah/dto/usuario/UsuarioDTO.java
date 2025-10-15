@@ -31,10 +31,10 @@ public class UsuarioDTO {
     @Schema(description = "Telefone do usuário", example = "(11) 98765-4321", maxLength = 20)
     private String telefone;
 
-    @Schema(description = "Data de nascimento", example = "2002-04-13")
+    @Schema(description = "Data de nascimento", example = "1990-05-20")
     private LocalDate dataNascimento;
 
-    @Schema(description = "Gênero do usuário", example = "Feminino", maxLength = 20)
+    @Schema(description = "Gênero do usuário", example = "Masculino", maxLength = 20)
     private String genero;
 
     @Schema(description = "URL da foto do perfil", example = "https://...", maxLength = 500)

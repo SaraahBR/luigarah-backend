@@ -7,14 +7,18 @@ import com.luigarah.dto.autenticacao.LoginRequestDTO;
 import com.luigarah.dto.autenticacao.RegistroRequestDTO;
 import com.luigarah.dto.autenticacao.OAuthSyncRequest;
 import com.luigarah.dto.usuario.AtualizarPerfilRequest;
+import com.luigarah.dto.usuario.EnderecoDTO;
 import com.luigarah.dto.usuario.UsuarioDTO;
 import com.luigarah.exception.RecursoNaoEncontradoException;
 import com.luigarah.exception.RegraDeNegocioException;
+import com.luigarah.mapper.usuario.EnderecoMapper;
 import com.luigarah.mapper.usuario.UsuarioMapper;
 import com.luigarah.model.autenticacao.AuthProvider;
 import com.luigarah.model.autenticacao.OAuthProvider;
 import com.luigarah.model.autenticacao.Role;
 import com.luigarah.model.autenticacao.Usuario;
+import com.luigarah.model.usuario.Endereco;
+import com.luigarah.repository.autenticacao.EnderecoRepository;
 import com.luigarah.repository.autenticacao.UsuarioRepository;
 import com.luigarah.repository.autenticacao.OAuthProviderRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +33,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -42,6 +48,8 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final UsuarioMapper usuarioMapper;
     private final OAuthProviderRepository oAuthProviderRepository;
+    private final EnderecoRepository enderecoRepository;
+    private final EnderecoMapper enderecoMapper;
 
     // Map para controlar locks por email (evita race condition)
     private final ConcurrentHashMap<String, Object> emailLocks = new ConcurrentHashMap<>();
@@ -367,11 +375,61 @@ public class AuthService {
             usuario.setFotoUrl(request.getFotoUrl());
         }
 
+        // Salva os dados pessoais primeiro
         usuario = usuarioRepository.save(usuario);
+
+        // ✅ PROCESSA ENDEREÇOS se fornecidos
+        if (request.getEnderecos() != null && !request.getEnderecos().isEmpty()) {
+            log.info("📍 Processando {} endereços recebidos", request.getEnderecos().size());
+            atualizarEnderecosUsuario(usuario, request.getEnderecos());
+        }
 
         log.info("✅ Perfil atualizado com sucesso!");
 
         return usuarioMapper.toDTO(usuario);
+    }
+
+    /**
+     * Atualiza os endereços do usuário
+     * Remove endereços antigos e adiciona os novos
+     */
+    private void atualizarEnderecosUsuario(Usuario usuario, List<EnderecoDTO> enderecosDTO) {
+        log.info("🏠 Atualizando endereços do usuário ID: {}", usuario.getId());
+
+        // 1. Remove todos os endereços antigos
+        enderecoRepository.deleteByUsuarioId(usuario.getId());
+        enderecoRepository.flush();
+        log.info("🗑️ Endereços antigos removidos");
+
+        // 2. Adiciona os novos endereços
+        List<Endereco> novosEnderecos = new ArrayList<>();
+        boolean temPrincipal = false;
+
+        for (EnderecoDTO dto : enderecosDTO) {
+            Endereco endereco = enderecoMapper.toEntity(dto);
+            endereco.setUsuario(usuario);
+
+            // Garante que apenas um endereço seja principal
+            if (dto.getPrincipal() != null && dto.getPrincipal() && !temPrincipal) {
+                endereco.setPrincipal(true);
+                temPrincipal = true;
+                log.info("✅ Endereço marcado como principal: {}, {}", endereco.getRua(), endereco.getNumero());
+            } else {
+                endereco.setPrincipal(false);
+            }
+
+            novosEnderecos.add(endereco);
+        }
+
+        // 3. Se nenhum foi marcado como principal, marca o primeiro
+        if (!temPrincipal && !novosEnderecos.isEmpty()) {
+            novosEnderecos.get(0).setPrincipal(true);
+            log.info("✅ Primeiro endereço marcado como principal automaticamente");
+        }
+
+        // 4. Salva todos os endereços
+        enderecoRepository.saveAll(novosEnderecos);
+        log.info("✅ {} endereços salvos com sucesso!", novosEnderecos.size());
     }
 
     /**
@@ -406,5 +464,56 @@ public class AuthService {
         usuarioRepository.save(usuario);
 
         log.info("✅ Foto removida com sucesso!");
+    }
+
+    /**
+     * ✅ NOVO: Adiciona ou atualiza um endereço para o usuário autenticado
+     */
+    @Transactional
+    public EnderecoDTO salvarEndereco(EnderecoDTO enderecoDTO) {
+        Usuario usuario = getUsuarioAutenticado();
+
+        Endereco endereco = enderecoMapper.toEntity(enderecoDTO);
+        endereco.setUsuario(usuario);
+
+        endereco = enderecoRepository.save(endereco);
+
+        log.info("✅ Endereço salvo com sucesso!");
+
+        return enderecoMapper.toDTO(endereco);
+    }
+
+    /**
+     * ✅ NOVO: Busca todos os endereços do usuário autenticado
+     */
+    @Transactional(readOnly = true)
+    public List<EnderecoDTO> listarEnderecos() {
+        Usuario usuario = getUsuarioAutenticado();
+
+        List<Endereco> enderecos = enderecoRepository.findByUsuarioId(usuario.getId());
+
+        return enderecos.stream()
+                .map(enderecoMapper::toDTO)
+                .toList();
+    }
+
+    /**
+     * ✅ NOVO: Remove um endereço pelo ID
+     */
+    @Transactional
+    public void removerEndereco(Long enderecoId) {
+        Usuario usuario = getUsuarioAutenticado();
+
+        Endereco endereco = enderecoRepository.findById(enderecoId)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Endereço não encontrado"));
+
+        // Verifica se o endereço pertence ao usuário
+        if (!endereco.getUsuario().getId().equals(usuario.getId())) {
+            throw new RegraDeNegocioException("Acesso negado");
+        }
+
+        enderecoRepository.delete(endereco);
+
+        log.info("✅ Endereço removido com sucesso!");
     }
 }
