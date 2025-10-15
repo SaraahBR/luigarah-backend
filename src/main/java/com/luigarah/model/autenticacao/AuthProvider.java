@@ -7,6 +7,7 @@ package com.luigarah.model.autenticacao;
  *   <li><b>LOCAL</b> - Autenticação tradicional com email/senha</li>
  *   <li><b>GOOGLE</b> - Autenticação via Google OAuth2</li>
  *   <li><b>FACEBOOK</b> - Autenticação via Facebook OAuth2</li>
+ *   <li><b>GITHUB</b> - Autenticação via GitHub OAuth2</li>
  * </ul>
  */
 public enum AuthProvider {
@@ -23,5 +24,10 @@ public enum AuthProvider {
     /**
      * Autenticação via Facebook OAuth2
      */
-    FACEBOOK
+    FACEBOOK,
+
+    /**
+     * Autenticação via GitHub OAuth2
+     */
+    GITHUB
 }

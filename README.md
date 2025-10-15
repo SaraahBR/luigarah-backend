@@ -70,7 +70,8 @@ O **Luigarah Backend** é uma API RESTful robusta e escalável desenvolvida para
 - Tokens JWT com expiração configurável (24h padrão)
 - Sistema de roles: **USER** (usuário comum) e **ADMIN** (administrador)
 - Alteração de senha segura com validação de força
-- Suporte preparado para OAuth2 (Google/Facebook)
+- **🆕 OAuth2 Social Login** - Google, Facebook, GitHub
+- **🆕 Sincronização OAuth** - Vinculação automática de contas sociais
 - Perfil de usuário (visualizar e editar)
 
 ### 👥 Administração de Usuários (ADMIN)
@@ -306,6 +307,7 @@ luigara-backend/
 │   │   │           │   │   ├── AlterarSenhaRequestDTO.java
 │   │   │           │   │   ├── AuthResponseDTO.java
 │   │   │           │   │   ├── LoginRequestDTO.java
+│   │   │           │   │   │   └── OAuthSyncRequest.java            # 🆕 Request OAuth Sync
 │   │   │           │   │   └── RegistroRequestDTO.java
 │   │   │           │   ├── carrinho/
 │   │   │           │   │   ├── CarrinhoItemDTO.java
@@ -510,6 +512,7 @@ controller/{modulo}/  → service/{modulo}/  → repository/{modulo}/
 - `AuthController.java` - Endpoints de autenticação
   - POST `/api/auth/login` - Login com email/senha
   - POST `/api/auth/registrar` - Registro de novo usuário
+  - POST `/api/auth/oauth/sync` - 🆕 Sincronizar conta OAuth (Google/Facebook/GitHub)
   - GET `/api/auth/perfil` - Visualizar perfil (autenticado)
   - PUT `/api/auth/perfil` - Atualizar perfil (autenticado)
   - PUT `/api/auth/alterar-senha` - Alterar senha (autenticado)
@@ -1097,6 +1100,7 @@ connection-timeout=30000 # 30 segundos
 |--------|----------|-----------|------|------|
 | POST | `/api/auth/login` | Login com email/senha | ❌ | - |
 | POST | `/api/auth/registrar` | Criar nova conta | ❌ | - |
+| POST | `/api/auth/oauth/sync` | 🆕 Sincronizar conta OAuth (Google/Facebook/GitHub) | ❌ | - |
 | GET | `/api/auth/perfil` | Visualizar perfil | ✅ | USER |
 | PUT | `/api/auth/perfil` | Atualizar perfil | ✅ | USER |
 | PUT | `/api/auth/alterar-senha` | Alterar senha | ✅ | USER |

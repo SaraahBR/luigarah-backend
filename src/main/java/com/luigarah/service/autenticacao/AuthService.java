@@ -5,14 +5,17 @@ import com.luigarah.dto.autenticacao.AlterarSenhaRequestDTO;
 import com.luigarah.dto.autenticacao.AuthResponseDTO;
 import com.luigarah.dto.autenticacao.LoginRequestDTO;
 import com.luigarah.dto.autenticacao.RegistroRequestDTO;
+import com.luigarah.dto.autenticacao.OAuthSyncRequest;
 import com.luigarah.dto.usuario.UsuarioDTO;
 import com.luigarah.exception.RecursoNaoEncontradoException;
 import com.luigarah.exception.RegraDeNegocioException;
 import com.luigarah.mapper.usuario.UsuarioMapper;
 import com.luigarah.model.autenticacao.AuthProvider;
+import com.luigarah.model.autenticacao.OAuthProvider;
 import com.luigarah.model.autenticacao.Role;
 import com.luigarah.model.autenticacao.Usuario;
 import com.luigarah.repository.autenticacao.UsuarioRepository;
+import com.luigarah.repository.autenticacao.OAuthProviderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -35,6 +38,7 @@ public class AuthService {
     private final JwtTokenProvider tokenProvider;
     private final AuthenticationManager authenticationManager;
     private final UsuarioMapper usuarioMapper;
+    private final OAuthProviderRepository oAuthProviderRepository;
 
     @Transactional
     public AuthResponseDTO login(LoginRequestDTO loginRequest) {
@@ -161,5 +165,122 @@ public class AuthService {
         usuarioRepository.save(usuario);
 
         log.info("Senha alterada com sucesso para o usuário: {}", usuario.getEmail());
+    }
+
+    /**
+     * Sincroniza conta OAuth com o backend.
+     * - Se e-mail existe: vincula OAuth e retorna JWT
+     * - Se e-mail não existe: cria conta e retorna JWT
+     */
+    @Transactional
+    public AuthResponseDTO syncOAuth(OAuthSyncRequest request) {
+        log.info("Sincronizando conta OAuth - Provider: {}, Email: {}", request.getProvider(), request.getEmail());
+
+        // 1. Busca usuário por e-mail
+        Usuario usuario;
+        boolean isNewUser = false;
+
+        var usuarioOpt = usuarioRepository.findByEmail(request.getEmail());
+
+        if (usuarioOpt.isPresent()) {
+            // E-mail já existe: vincula OAuth
+            usuario = usuarioOpt.get();
+            log.info("Usuário existente encontrado: {}", usuario.getEmail());
+
+            // Atualiza foto se fornecida
+            if (request.getFotoPerfil() != null && !request.getFotoPerfil().isEmpty()) {
+                usuario.setFotoUrl(request.getFotoPerfil());
+            }
+
+            // Atualiza provider se estava como LOCAL
+            if (usuario.getProvider() == AuthProvider.LOCAL) {
+                AuthProvider authProvider = mapStringToAuthProvider(request.getProvider());
+                if (authProvider != null) {
+                    usuario.setProvider(authProvider);
+                }
+            }
+
+        } else {
+            // E-mail não existe: cria nova conta
+            isNewUser = true;
+            log.info("Criando novo usuário OAuth: {}", request.getEmail());
+
+            AuthProvider authProvider = mapStringToAuthProvider(request.getProvider());
+
+            usuario = Usuario.builder()
+                    .nome(request.getNome())
+                    .sobrenome(request.getSobrenome())
+                    .email(request.getEmail())
+                    .fotoUrl(request.getFotoPerfil())
+                    .role(Role.USER)
+                    .ativo(true)
+                    .emailVerificado(true) // OAuth já verifica o email
+                    .provider(authProvider != null ? authProvider : AuthProvider.LOCAL)
+                    .providerId(request.getOauthId())
+                    .senha(passwordEncoder.encode(java.util.UUID.randomUUID().toString())) // Senha aleatória
+                    .build();
+
+            usuario = usuarioRepository.save(usuario);
+        }
+
+        // 2. Vincula ou atualiza OAuth provider
+        var providerOpt = oAuthProviderRepository
+                .findByUsuarioIdAndProvider(usuario.getId(), request.getProvider());
+
+        OAuthProvider oauthProvider;
+
+        if (providerOpt.isPresent()) {
+            // Atualiza provider existente
+            oauthProvider = providerOpt.get();
+            if (request.getOauthId() != null && !request.getOauthId().isEmpty()) {
+                oauthProvider.setProviderId(request.getOauthId());
+            }
+            log.info("OAuth provider atualizado: {}", request.getProvider());
+        } else {
+            // Cria novo provider
+            oauthProvider = OAuthProvider.builder()
+                    .usuario(usuario)
+                    .provider(request.getProvider())
+                    .providerId(request.getOauthId())
+                    .build();
+            log.info("Novo OAuth provider criado: {}", request.getProvider());
+        }
+
+        oAuthProviderRepository.save(oauthProvider);
+
+        // 3. Atualiza último acesso
+        usuario.setUltimoAcesso(LocalDateTime.now());
+        usuario = usuarioRepository.save(usuario);
+
+        // 4. Gera token JWT
+        String token = tokenProvider.generateTokenFromUsername(usuario.getEmail());
+
+        // 5. Converte para DTO
+        UsuarioDTO usuarioDTO = usuarioMapper.toDTO(usuario);
+
+        log.info("OAuth sync concluído com sucesso. Novo usuário: {}", isNewUser);
+
+        // 6. Retorna response
+        return AuthResponseDTO.builder()
+                .token(token)
+                .tipo("Bearer")
+                .usuario(usuarioDTO)
+                .build();
+    }
+
+    /**
+     * Mapeia string do provider para o enum AuthProvider
+     */
+    private AuthProvider mapStringToAuthProvider(String provider) {
+        if (provider == null) {
+            return null;
+        }
+
+        return switch (provider.toLowerCase()) {
+            case "google" -> AuthProvider.GOOGLE;
+            case "facebook" -> AuthProvider.FACEBOOK;
+            case "github" -> AuthProvider.GITHUB;
+            default -> null;
+        };
     }
 }
