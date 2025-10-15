@@ -6,6 +6,7 @@ import com.luigarah.dto.autenticacao.AuthResponseDTO;
 import com.luigarah.dto.autenticacao.LoginRequestDTO;
 import com.luigarah.dto.autenticacao.RegistroRequestDTO;
 import com.luigarah.dto.autenticacao.OAuthSyncRequest;
+import com.luigarah.dto.usuario.AtualizarPerfilRequest;
 import com.luigarah.dto.usuario.UsuarioDTO;
 import com.luigarah.exception.RecursoNaoEncontradoException;
 import com.luigarah.exception.RegraDeNegocioException;
@@ -324,5 +325,78 @@ public class AuthService {
             case "github" -> AuthProvider.GITHUB;
             default -> null;
         };
+    }
+
+    /**
+     * ✅ NOVO: Atualiza perfil usando email do JWT (mais seguro)
+     * Email vem do token, não do body do request
+     */
+    @Transactional
+    public UsuarioDTO atualizarPerfilComJWT(AtualizarPerfilRequest request, String email) {
+        log.info("📝 Atualizando perfil do usuário: {}", email);
+
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado"));
+
+        // Atualiza apenas os campos fornecidos (null-safe)
+        if (request.getNome() != null && !request.getNome().isBlank()) {
+            usuario.setNome(request.getNome());
+        }
+        if (request.getSobrenome() != null && !request.getSobrenome().isBlank()) {
+            usuario.setSobrenome(request.getSobrenome());
+        }
+        if (request.getTelefone() != null && !request.getTelefone().isBlank()) {
+            // Telefone já vem limpo do setter do DTO
+            usuario.setTelefone(request.getTelefone());
+        }
+        if (request.getDataNascimento() != null) {
+            usuario.setDataNascimento(request.getDataNascimento());
+        }
+        if (request.getGenero() != null && !request.getGenero().isBlank()) {
+            usuario.setGenero(request.getGenero());
+        }
+        if (request.getFotoUrl() != null && !request.getFotoUrl().isBlank()) {
+            usuario.setFotoUrl(request.getFotoUrl());
+        }
+
+        usuario = usuarioRepository.save(usuario);
+
+        log.info("✅ Perfil atualizado com sucesso!");
+
+        return usuarioMapper.toDTO(usuario);
+    }
+
+    /**
+     * ✅ NOVO: Atualiza apenas a foto de perfil
+     */
+    @Transactional
+    public UsuarioDTO atualizarFotoPerfil(String fotoUrl, String email) {
+        log.info("📸 Atualizando foto de perfil do usuário: {}", email);
+
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado"));
+
+        usuario.setFotoUrl(fotoUrl);
+        usuario = usuarioRepository.save(usuario);
+
+        log.info("✅ Foto atualizada com sucesso!");
+
+        return usuarioMapper.toDTO(usuario);
+    }
+
+    /**
+     * ✅ NOVO: Remove a foto de perfil
+     */
+    @Transactional
+    public void removerFotoPerfil(String email) {
+        log.info("🗑️ Removendo foto de perfil do usuário: {}", email);
+
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado"));
+
+        usuario.setFotoUrl(null);
+        usuarioRepository.save(usuario);
+
+        log.info("✅ Foto removida com sucesso!");
     }
 }

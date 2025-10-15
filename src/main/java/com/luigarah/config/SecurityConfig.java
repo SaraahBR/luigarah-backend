@@ -56,54 +56,91 @@ public class SecurityConfig {
                 .cors(cors -> cors.configure(http))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Endpoints públicos - DEVEM VIR PRIMEIRO
+                        // ✅ Endpoints públicos de autenticação
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/oauth2/**").permitAll()
 
-                        // Swagger/OpenAPI público
+                        // ✅ Swagger/OpenAPI público
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 
-                        // Home público
+                        // ✅ Home público
                         .requestMatchers("/", "/home").permitAll()
 
-                        // Produtos - leitura pública
+                        // ✅ PRODUTOS - Leitura pública (QUALQUER PESSOA PODE VER)
                         .requestMatchers(HttpMethod.GET, "/api/produtos/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/identidades/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/tamanhos/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/padroes-tamanho/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/estoque/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/produtos/**").permitAll()
 
-                        // Produtos - escrita apenas ADMIN
+                        // ✅ CATEGORIAS - Leitura pública (CORREÇÃO DO ERRO 403)
+                        .requestMatchers(HttpMethod.GET, "/api/categorias/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/categorias/**").permitAll()
+
+                        // ✅ MARCAS - Leitura pública
+                        .requestMatchers(HttpMethod.GET, "/api/marcas/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/marcas/**").permitAll()
+
+                        // ✅ IDENTIDADES - Leitura pública
+                        .requestMatchers(HttpMethod.GET, "/api/identidades/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/identidades/**").permitAll()
+
+                        // ✅ TAMANHOS - Leitura pública
+                        .requestMatchers(HttpMethod.GET, "/api/tamanhos/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/tamanhos/**").permitAll()
+
+                        // ✅ PADRÕES DE TAMANHO - Leitura pública
+                        .requestMatchers(HttpMethod.GET, "/api/padroes-tamanho/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/padroes-tamanho/**").permitAll()
+
+                        // ✅ ESTOQUE - Leitura pública
+                        .requestMatchers(HttpMethod.GET, "/api/estoque/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/estoque/**").permitAll()
+
+                        // ✅ BUSCA - Leitura pública
+                        .requestMatchers(HttpMethod.GET, "/api/busca/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/busca/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/search/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/search/**").permitAll()
+
+                        // 🔒 PRODUTOS - Escrita apenas ADMIN
                         .requestMatchers(HttpMethod.POST, "/api/produtos/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/produtos/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/produtos/**").hasRole("ADMIN")
 
-                        // Identidades - escrita apenas ADMIN
+                        // 🔒 IDENTIDADES - Escrita apenas ADMIN
                         .requestMatchers(HttpMethod.POST, "/api/identidades/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/identidades/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/identidades/**").hasRole("ADMIN")
 
-                        // Tamanhos - escrita apenas ADMIN
+                        // 🔒 TAMANHOS - Escrita apenas ADMIN
                         .requestMatchers(HttpMethod.POST, "/api/tamanhos/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/tamanhos/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/tamanhos/**").hasRole("ADMIN")
 
-                        // Estoque - escrita apenas ADMIN
+                        // 🔒 ESTOQUE - Escrita apenas ADMIN
                         .requestMatchers(HttpMethod.POST, "/api/estoque/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/estoque/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/estoque/**").hasRole("ADMIN")
 
-                        // Carrinho e Lista de Desejos - apenas usuários autenticados
+                        // 🔒 CARRINHO - Apenas usuários autenticados
                         .requestMatchers("/api/carrinho/**").authenticated()
-                        .requestMatchers("/api/lista-desejos/**").authenticated()
+                        .requestMatchers("/carrinho/**").authenticated()
 
-                        // Perfil de usuário - apenas usuários autenticados
+                        // 🔒 LISTA DE DESEJOS - Apenas usuários autenticados
+                        .requestMatchers("/api/lista-desejos/**").authenticated()
+                        .requestMatchers("/lista-desejos/**").authenticated()
+                        .requestMatchers("/api/favoritos/**").authenticated()
+                        .requestMatchers("/favoritos/**").authenticated()
+
+                        // 🔒 PEDIDOS - Apenas usuários autenticados
+                        .requestMatchers("/api/pedidos/**").authenticated()
+                        .requestMatchers("/pedidos/**").authenticated()
+
+                        // 🔒 PERFIL - Apenas usuários autenticados
                         .requestMatchers("/api/usuario/**").authenticated()
 
-                        // Endpoints de administração - apenas autenticado (o @PreAuthorize vai checar se é ADMIN)
+                        // 🔒 ADMIN - Apenas ADMIN
                         .requestMatchers("/api/admin/**").authenticated()
 
-                        // Todos os outros endpoints requerem autenticação
+                        // 🔒 Todos os outros endpoints requerem autenticação
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
