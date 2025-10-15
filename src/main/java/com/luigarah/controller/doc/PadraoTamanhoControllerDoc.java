@@ -1,8 +1,8 @@
 package com.luigarah.controller.doc;
 
-import com.luigarah.dto.PadraoAtualizacaoDTO;
-import com.luigarah.dto.PadraoItemDTO;
-import com.luigarah.dto.RespostaProdutoDTO;
+import com.luigarah.dto.tamanho.PadraoAtualizacaoDTO;
+import com.luigarah.dto.tamanho.PadraoItemDTO;
+import com.luigarah.dto.produto.RespostaProdutoDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;

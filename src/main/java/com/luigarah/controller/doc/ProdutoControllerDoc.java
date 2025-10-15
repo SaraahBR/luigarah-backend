@@ -1,8 +1,8 @@
 package com.luigarah.controller.doc;
 
-import com.luigarah.dto.ProdutoCreateDTO;
-import com.luigarah.dto.ProdutoDTO;
-import com.luigarah.dto.RespostaProdutoDTO;
+import com.luigarah.dto.produto.ProdutoCreateDTO;
+import com.luigarah.dto.produto.ProdutoDTO;
+import com.luigarah.dto.produto.RespostaProdutoDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -516,4 +516,3 @@ public interface ProdutoControllerDoc {
             @Parameter(description = "Categoria alvo (bolsas|roupas|sapatos).", example = "bolsas") String categoria
     );
 }
-

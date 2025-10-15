@@ -1,8 +1,9 @@
 package com.luigarah.service.impl;
 
-import com.luigarah.dto.ProdutoTamanhoDTO;
-import com.luigarah.repository.RepositorioProduto;
-import com.luigarah.service.ServicoEstoque;
+import com.luigarah.dto.tamanho.ProdutoTamanhoDTO;
+import com.luigarah.repository.produto.RepositorioProduto;
+import com.luigarah.service.estoque.ServicoEstoque;
+import com.luigarah.service.estoque.impl.ServicoEstoqueImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;

@@ -1,6 +1,6 @@
 package com.luigarah.controller.doc;
 
-import com.luigarah.dto.RespostaProdutoDTO;
+import com.luigarah.dto.produto.RespostaProdutoDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;

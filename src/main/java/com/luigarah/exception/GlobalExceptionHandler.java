@@ -1,8 +1,11 @@
 package com.luigarah.exception;
 
-import com.luigarah.dto.RespostaProdutoDTO;
+import com.luigarah.dto.produto.RespostaProdutoDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,6 +21,36 @@ public class GlobalExceptionHandler {
     public ResponseEntity<RespostaProdutoDTO<Object>> tratarProdutoNaoEncontrado(ProductNotFoundException ex) {
         RespostaProdutoDTO<Object> resposta = RespostaProdutoDTO.erro(ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(resposta);
+    }
+
+    @ExceptionHandler(RecursoNaoEncontradoException.class)
+    public ResponseEntity<RespostaProdutoDTO<Object>> tratarRecursoNaoEncontrado(RecursoNaoEncontradoException ex) {
+        RespostaProdutoDTO<Object> resposta = RespostaProdutoDTO.erro(ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(resposta);
+    }
+
+    @ExceptionHandler(RegraDeNegocioException.class)
+    public ResponseEntity<RespostaProdutoDTO<Object>> tratarRegraDeNegocio(RegraDeNegocioException ex) {
+        RespostaProdutoDTO<Object> resposta = RespostaProdutoDTO.erro(ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(resposta);
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<RespostaProdutoDTO<Object>> tratarCredenciaisInvalidas(BadCredentialsException ex) {
+        RespostaProdutoDTO<Object> resposta = RespostaProdutoDTO.erro("Email ou senha incorretos");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(resposta);
+    }
+
+    @ExceptionHandler(UsernameNotFoundException.class)
+    public ResponseEntity<RespostaProdutoDTO<Object>> tratarUsuarioNaoEncontrado(UsernameNotFoundException ex) {
+        RespostaProdutoDTO<Object> resposta = RespostaProdutoDTO.erro("Email ou senha incorretos");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(resposta);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<RespostaProdutoDTO<Object>> tratarErroAutenticacao(AuthenticationException ex) {
+        RespostaProdutoDTO<Object> resposta = RespostaProdutoDTO.erro("Erro na autenticação: " + ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(resposta);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

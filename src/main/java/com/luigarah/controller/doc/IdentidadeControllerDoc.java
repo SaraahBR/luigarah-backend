@@ -1,8 +1,8 @@
 package com.luigarah.controller.doc;
 
-import com.luigarah.dto.IdentidadeCreateDTO;
-import com.luigarah.dto.IdentidadeDTO;
-import com.luigarah.dto.IdentidadeUpdateDTO;
+import com.luigarah.dto.identidade.IdentidadeCreateDTO;
+import com.luigarah.dto.identidade.IdentidadeDTO;
+import com.luigarah.dto.identidade.IdentidadeUpdateDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;

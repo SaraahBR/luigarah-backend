@@ -1,8 +1,9 @@
 package com.luigarah.service.impl;
 
-import com.luigarah.repository.RepositorioProduto;
-import com.luigarah.repository.RepositorioTamanho;
-import com.luigarah.service.ServicoTamanho;
+import com.luigarah.repository.produto.RepositorioProduto;
+import com.luigarah.repository.tamanho.RepositorioTamanho;
+import com.luigarah.service.tamanho.ServicoTamanho;
+import com.luigarah.service.tamanho.impl.ServicoTamanhoImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
