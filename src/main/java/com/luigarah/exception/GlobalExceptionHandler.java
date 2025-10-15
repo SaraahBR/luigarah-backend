@@ -21,21 +21,24 @@ public class GlobalExceptionHandler {
 
     /**
      * ✅ Adiciona headers CORS em todas as respostas de erro
+     * ✅ CORRIGIDO: Aceita qualquer origem permitida para evitar bloqueio
      */
     private HttpHeaders getCorsHeaders(WebRequest request) {
         HttpHeaders headers = new HttpHeaders();
         String origin = request.getHeader("Origin");
 
-        // Permitir origens específicas
-        if (origin != null && (
-                origin.equals("http://localhost:3000") ||
-                        origin.equals("https://luigarah.vercel.app") ||
-                        origin.matches("https://.*\\.vercel\\.app"))) {
-            headers.add("Access-Control-Allow-Origin", origin);
-            headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
-            headers.add("Access-Control-Allow-Headers", "*");
-            headers.add("Access-Control-Allow-Credentials", "true");
-            headers.add("Access-Control-Expose-Headers", "Authorization, Content-Type, X-Total-Count");
+        // ✅ CORREÇÃO CRÍTICA: Permitir todas as origens configuradas
+        if (origin != null && !origin.isEmpty()) {
+            // Aceita localhost:3000, localhost:3001, Vercel, etc
+            if (origin.contains("localhost") ||
+                    origin.contains("vercel.app") ||
+                    origin.contains("luigarah")) {
+                headers.add("Access-Control-Allow-Origin", origin);
+                headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+                headers.add("Access-Control-Allow-Headers", "*");
+                headers.add("Access-Control-Allow-Credentials", "true");
+                headers.add("Access-Control-Expose-Headers", "Authorization, Content-Type, X-Total-Count");
+            }
         }
 
         return headers;
@@ -122,10 +125,20 @@ public class GlobalExceptionHandler {
                 .body(resposta);
     }
 
+    /**
+     * ✅ CORRIGIDO: Captura QUALQUER exceção e adiciona headers CORS
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<RespostaProdutoDTO<Object>> tratarExcecaoGeral(
             Exception ex, WebRequest request) {
-        RespostaProdutoDTO<Object> resposta = RespostaProdutoDTO.erro("Erro interno do servidor: " + ex.getMessage());
+
+        // Log detalhado do erro para debug
+        ex.printStackTrace();
+
+        RespostaProdutoDTO<Object> resposta = RespostaProdutoDTO.erro(
+                "Erro interno do servidor: " + ex.getMessage()
+        );
+
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .headers(getCorsHeaders(request))
                 .body(resposta);

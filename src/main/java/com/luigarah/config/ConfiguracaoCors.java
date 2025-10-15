@@ -10,7 +10,8 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.Arrays;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Configuration
 public class ConfiguracaoCors implements WebMvcConfigurer {
@@ -58,19 +59,17 @@ public class ConfiguracaoCors implements WebMvcConfigurer {
 
     /**
      * ✅ Adiciona wildcards para Vercel além das origens configuradas
+     * ✅ Usa Set para eliminar duplicatas automaticamente
      */
     private String[] getOrigensComWildcard() {
-        List<String> origens = new java.util.ArrayList<>(Arrays.asList(origensPermitidas.split(",")));
+        // Usar HashSet para eliminar duplicatas automaticamente
+        Set<String> origens = new HashSet<>(Arrays.asList(origensPermitidas.split(",")));
 
         // Adicionar wildcards para Vercel (preview deployments)
-        if (!origens.contains("https://*.vercel.app")) {
-            origens.add("https://*.vercel.app");
-        }
+        origens.add("https://*.vercel.app");
 
-        // Adicionar localhost alternativo se não existir
-        if (!origens.contains("http://localhost:3001")) {
-            origens.add("http://localhost:3001");
-        }
+        // Adicionar localhost alternativo
+        origens.add("http://localhost:3001");
 
         return origens.toArray(new String[0]);
     }
