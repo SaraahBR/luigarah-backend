@@ -32,6 +32,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+
+        // ✅ CORREÇÃO CRÍTICA: Permitir requisições OPTIONS (CORS preflight) sem autenticação
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            log.debug("Requisição OPTIONS detectada - pulando validação JWT para URI: {}", request.getRequestURI());
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         try {
             String jwt = getJwtFromRequest(request);
 
