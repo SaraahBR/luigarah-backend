@@ -37,7 +37,7 @@ public class S3ImageStorageService implements ImageStorageService {
     @Value("${storage.publicBaseUrl:}")
     private String publicBaseUrl;
 
-    @Value("${aws.region:auto-r2}")
+    @Value("${aws.region:auto}")
     private String region;
 
     @Value("${aws.s3.endpoint}")
@@ -135,4 +135,3 @@ public class S3ImageStorageService implements ImageStorageService {
         return s == null || s.trim().isEmpty();
     }
 }
-
