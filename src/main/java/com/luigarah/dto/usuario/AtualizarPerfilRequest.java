@@ -58,7 +58,7 @@ public class AtualizarPerfilRequest {
         regexp = "^https?://.*\\.(jpg|jpeg|png|gif|webp|JPG|JPEG|PNG|GIF|WEBP)$|^https?://.*googleusercontent\\.com/.*$|^https?://.*fbcdn\\.net/.*$",
         message = "URL de foto inválida"
     )
-    private String fotoUrl;
+    private String fotoPerfil;
 
     @Valid
     @Schema(description = "Lista de endereços do usuário")

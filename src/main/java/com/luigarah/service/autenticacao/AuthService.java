@@ -96,7 +96,7 @@ public class AuthService {
                 .telefone(registroRequest.getTelefone())
                 .dataNascimento(registroRequest.getDataNascimento())
                 .genero(registroRequest.getGenero())
-                .fotoUrl(registroRequest.getFotoUrl())
+                .fotoPerfil(registroRequest.getFotoPerfil())
                 .role(Role.USER)
                 .ativo(true)
                 .emailVerificado(false)
@@ -154,8 +154,8 @@ public class AuthService {
         usuario.setGenero(updateRequest.getGenero());
 
         // Atualiza foto de perfil se fornecida
-        if (updateRequest.getFotoUrl() != null && !updateRequest.getFotoUrl().isBlank()) {
-            usuario.setFotoUrl(updateRequest.getFotoUrl());
+        if (updateRequest.getFotoPerfil() != null && !updateRequest.getFotoPerfil().isBlank()) {
+            usuario.setFotoPerfil(updateRequest.getFotoPerfil());
         }
 
         if (updateRequest.getSenha() != null && !updateRequest.getSenha().isBlank()) {
@@ -227,7 +227,7 @@ public class AuthService {
 
             // Atualiza foto se fornecida
             if (request.getFotoPerfil() != null && !request.getFotoPerfil().isEmpty()) {
-                usuario.setFotoUrl(request.getFotoPerfil());
+                usuario.setFotoPerfil(request.getFotoPerfil());
             }
 
             // Atualiza provider se estava como LOCAL
@@ -249,7 +249,7 @@ public class AuthService {
                     .nome(request.getNome())
                     .sobrenome(request.getSobrenome())
                     .email(request.getEmail())
-                    .fotoUrl(request.getFotoPerfil())
+                    .fotoPerfil(request.getFotoPerfil())
                     .role(Role.USER)
                     .ativo(true)
                     .emailVerificado(true) // OAuth já verifica o email
@@ -371,8 +371,8 @@ public class AuthService {
         if (request.getGenero() != null && !request.getGenero().isBlank()) {
             usuario.setGenero(request.getGenero());
         }
-        if (request.getFotoUrl() != null && !request.getFotoUrl().isBlank()) {
-            usuario.setFotoUrl(request.getFotoUrl());
+        if (request.getFotoPerfil() != null && !request.getFotoPerfil().isBlank()) {
+            usuario.setFotoPerfil(request.getFotoPerfil());
         }
 
         // Salva os dados pessoais primeiro
@@ -436,13 +436,13 @@ public class AuthService {
      * ✅ NOVO: Atualiza apenas a foto de perfil
      */
     @Transactional
-    public UsuarioDTO atualizarFotoPerfil(String fotoUrl, String email) {
+    public UsuarioDTO atualizarFotoPerfil(String fotoPerfil, String email) {
         log.info("📸 Atualizando foto de perfil do usuário: {}", email);
 
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado"));
 
-        usuario.setFotoUrl(fotoUrl);
+        usuario.setFotoPerfil(fotoPerfil);
         usuario = usuarioRepository.save(usuario);
 
         log.info("✅ Foto atualizada com sucesso!");
@@ -460,7 +460,7 @@ public class AuthService {
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado"));
 
-        usuario.setFotoUrl(null);
+        usuario.setFotoPerfil(null);
         usuarioRepository.save(usuario);
 
         log.info("✅ Foto removida com sucesso!");

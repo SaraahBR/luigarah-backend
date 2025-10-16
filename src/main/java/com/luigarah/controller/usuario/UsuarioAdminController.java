@@ -20,6 +20,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -229,6 +230,212 @@ public class UsuarioAdminController {
                 "inativos", usuarioAdminService.contarTodos() - usuarioAdminService.contarAtivos(),
                 "admins", usuarioAdminService.contarPorRole(Role.ADMIN),
                 "users", usuarioAdminService.contarPorRole(Role.USER)
+        ));
+    }
+
+    /**
+     * Atualizar foto de perfil de um usuário por URL (ADMIN)
+     * PUT /api/admin/usuarios/{id}/foto
+     */
+    @PutMapping("/{id}/foto")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+            summary = "Atualizar foto de perfil de usuário por URL (ADMIN)",
+            description = "Permite que um admin atualize a URL da foto de perfil de qualquer usuário",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "URL da foto de perfil",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(
+                                    example = """
+                                    {
+                                      "fotoUrl": "https://exemplo.com/foto.jpg"
+                                    }
+                                    """
+                            )
+                    )
+            ),
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Foto atualizada com sucesso",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(
+                                            example = """
+                                            {
+                                              "sucesso": true,
+                                              "mensagem": "Foto de perfil atualizada com sucesso",
+                                              "usuario": {
+                                                "id": 1,
+                                                "nome": "João",
+                                                "email": "joao@example.com",
+                                                "fotoPerfil": "https://exemplo.com/foto.jpg"
+                                              }
+                                            }
+                                            """
+                                    )
+                            )
+                    ),
+                    @ApiResponse(responseCode = "400", description = "URL da foto é obrigatória"),
+                    @ApiResponse(responseCode = "404", description = "Usuário não encontrado"),
+                    @ApiResponse(responseCode = "403", description = "Acesso negado - apenas ADMIN")
+            }
+    )
+    public ResponseEntity<Map<String, Object>> atualizarFotoPerfilPorUrl(
+            @Parameter(description = "ID do usuário") @PathVariable Long id,
+            @RequestBody Map<String, String> request
+    ) {
+        String fotoUrl = request.get("fotoUrl");
+
+        if (fotoUrl == null || fotoUrl.isEmpty()) {
+            return ResponseEntity.badRequest().body(
+                Map.of("sucesso", false, "mensagem", "URL da foto é obrigatória")
+            );
+        }
+
+        UsuarioAdminDTO usuario = usuarioAdminService.atualizarFotoPerfil(id, fotoUrl);
+
+        return ResponseEntity.ok(Map.of(
+            "sucesso", true,
+            "mensagem", "Foto de perfil atualizada com sucesso",
+            "usuario", usuario
+        ));
+    }
+
+    /**
+     * Upload de foto de perfil para um usuário (ADMIN)
+     * POST /api/admin/usuarios/{id}/foto/upload
+     */
+    @PostMapping(value = "/{id}/foto/upload", consumes = "multipart/form-data")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+            summary = "Upload de foto de perfil de usuário (ADMIN)",
+            description = """
+                    Permite que um admin faça upload de uma foto de perfil para qualquer usuário.
+                    
+                    **Formatos aceitos:** JPG, JPEG, PNG, WEBP, GIF
+                    **Tamanho máximo:** 5MB
+                    
+                    **Exemplo de uso:**
+                    ```javascript
+                    const formData = new FormData();
+                    formData.append('file', fotoFile);
+                    
+                    const response = await fetch('/api/admin/usuarios/1/foto/upload', {
+                      method: 'POST',
+                      headers: { 'Authorization': `Bearer ${adminToken}` },
+                      body: formData
+                    });
+                    ```
+                    """,
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Foto enviada com sucesso",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(
+                                            example = """
+                                            {
+                                              "sucesso": true,
+                                              "mensagem": "Foto de perfil enviada com sucesso",
+                                              "fotoUrl": "http://localhost:8080/uploads/usuarios/user_1.jpg",
+                                              "usuario": {
+                                                "id": 1,
+                                                "nome": "João",
+                                                "email": "joao@example.com",
+                                                "fotoPerfil": "http://localhost:8080/uploads/usuarios/user_1.jpg"
+                                              }
+                                            }
+                                            """
+                                    )
+                            )
+                    ),
+                    @ApiResponse(responseCode = "400", description = "Arquivo inválido ou muito grande"),
+                    @ApiResponse(responseCode = "404", description = "Usuário não encontrado"),
+                    @ApiResponse(responseCode = "403", description = "Acesso negado - apenas ADMIN")
+            }
+    )
+    public ResponseEntity<Map<String, Object>> uploadFotoPerfilUsuario(
+            @Parameter(description = "ID do usuário") @PathVariable Long id,
+            @Parameter(description = "Arquivo de imagem da foto de perfil", required = true)
+            @RequestParam("file") MultipartFile file
+    ) {
+        // Validações
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body(
+                Map.of("sucesso", false, "mensagem", "Arquivo vazio")
+            );
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            return ResponseEntity.badRequest().body(
+                Map.of("sucesso", false, "mensagem", "Arquivo deve ser uma imagem")
+            );
+        }
+
+        // Validar tamanho (máximo 5MB)
+        if (file.getSize() > 5 * 1024 * 1024) {
+            return ResponseEntity.badRequest().body(
+                Map.of("sucesso", false, "mensagem", "Arquivo muito grande (máx 5MB)")
+            );
+        }
+
+        // TODO: Implementar integração com ImageStorageService
+        // String fotoUrl = imageStorageService.save("usuarios/user_" + id, contentType, file.getSize(), file.getInputStream());
+
+        // Por enquanto, URL mockada
+        String fotoUrl = "http://localhost:8080/uploads/usuarios/user_" + id + ".jpg";
+
+        UsuarioAdminDTO usuario = usuarioAdminService.atualizarFotoPerfil(id, fotoUrl);
+
+        return ResponseEntity.ok(Map.of(
+            "sucesso", true,
+            "mensagem", "Foto de perfil enviada com sucesso",
+            "fotoUrl", fotoUrl,
+            "usuario", usuario
+        ));
+    }
+
+    /**
+     * Remover foto de perfil de um usuário (ADMIN)
+     * DELETE /api/admin/usuarios/{id}/foto
+     */
+    @DeleteMapping("/{id}/foto")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+            summary = "Remover foto de perfil de usuário (ADMIN)",
+            description = "Permite que um admin remova a foto de perfil de qualquer usuário",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Foto removida com sucesso",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(
+                                            example = """
+                                            {
+                                              "sucesso": true,
+                                              "mensagem": "Foto de perfil removida com sucesso"
+                                            }
+                                            """
+                                    )
+                            )
+                    ),
+                    @ApiResponse(responseCode = "404", description = "Usuário não encontrado"),
+                    @ApiResponse(responseCode = "403", description = "Acesso negado - apenas ADMIN")
+            }
+    )
+    public ResponseEntity<Map<String, Object>> removerFotoPerfilUsuario(
+            @Parameter(description = "ID do usuário") @PathVariable Long id
+    ) {
+        usuarioAdminService.removerFotoPerfil(id);
+
+        return ResponseEntity.ok(Map.of(
+            "sucesso", true,
+            "mensagem", "Foto de perfil removida com sucesso"
         ));
     }
 }

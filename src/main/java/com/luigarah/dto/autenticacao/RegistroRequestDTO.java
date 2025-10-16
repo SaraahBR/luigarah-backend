@@ -47,5 +47,5 @@ public class RegistroRequestDTO {
 
     @Size(max = 500, message = "URL da foto deve ter no máximo 500 caracteres")
     @Schema(description = "URL da foto de perfil", example = "https://lh3.googleusercontent.com/a/...", maxLength = 500)
-    private String fotoUrl;
+    private String fotoPerfil;
 }

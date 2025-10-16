@@ -9,9 +9,16 @@ import com.luigarah.dto.usuario.AtualizarPerfilRequest;
 import com.luigarah.dto.usuario.UsuarioDTO;
 import com.luigarah.service.autenticacao.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -23,6 +30,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(name = "Autenticação", description = "Endpoints para autenticação e gerenciamento de usuários")
 public class ControladorAutenticacao {
 
@@ -107,7 +115,7 @@ public class ControladorAutenticacao {
 
         } catch (Exception e) {
             System.err.println("❌ Erro ao atualizar perfil: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Erro ao atualizar perfil", e);
 
             return ResponseEntity.status(500).body(
                 Map.of(
@@ -119,11 +127,47 @@ public class ControladorAutenticacao {
     }
 
     /**
-     * Atualizar apenas a foto de perfil
+     * Atualizar apenas a foto de perfil (por URL)
      * PUT /api/auth/perfil/foto
      */
     @PutMapping("/perfil/foto")
-    @Operation(summary = "Atualizar foto de perfil", description = "Atualiza apenas a URL da foto de perfil")
+    @Operation(
+        summary = "Atualizar foto de perfil por URL",
+        description = "Atualiza a URL da foto de perfil do usuário autenticado",
+        requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            description = "URL da foto de perfil",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(
+                    example = """
+                    {
+                      "fotoUrl": "https://exemplo.com/foto.jpg"
+                    }
+                    """
+                )
+            )
+        )
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "Foto atualizada com sucesso",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(
+                    example = """
+                    {
+                      "sucesso": true,
+                      "mensagem": "Foto atualizada com sucesso",
+                      "fotoUrl": "https://exemplo.com/foto.jpg"
+                    }
+                    """
+                )
+            )
+        ),
+        @ApiResponse(responseCode = "400", description = "URL da foto é obrigatória"),
+        @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
     public ResponseEntity<?> atualizarFotoPerfil(
             @RequestBody Map<String, String> request,
             @AuthenticationPrincipal UserDetails userDetails
@@ -145,11 +189,12 @@ public class ControladorAutenticacao {
                 Map.of(
                     "sucesso", true,
                     "mensagem", "Foto atualizada com sucesso",
-                    "fotoUrl", usuario.getFotoUrl()
+                    "fotoUrl", usuario.getFotoPerfil()
                 )
             );
         } catch (Exception e) {
             System.err.println("❌ Erro ao atualizar foto: " + e.getMessage());
+            log.error("Erro ao atualizar foto de perfil", e);
             return ResponseEntity.status(500).body(
                 Map.of("sucesso", false, "mensagem", "Erro ao atualizar foto: " + e.getMessage())
             );
@@ -161,7 +206,25 @@ public class ControladorAutenticacao {
      * DELETE /api/auth/perfil/foto
      */
     @DeleteMapping("/perfil/foto")
-    @Operation(summary = "Remover foto de perfil", description = "Remove a foto de perfil do usuário")
+    @Operation(summary = "Remover foto de perfil", description = "Remove a foto de perfil do usuário autenticado")
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "Foto removida com sucesso",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(
+                    example = """
+                    {
+                      "sucesso": true,
+                      "mensagem": "Foto removida com sucesso"
+                    }
+                    """
+                )
+            )
+        ),
+        @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
     public ResponseEntity<?> removerFotoPerfil(@AuthenticationPrincipal UserDetails userDetails) {
         try {
             System.out.println("🗑️ Removendo foto de perfil do usuário: " + userDetails.getUsername());
@@ -173,6 +236,7 @@ public class ControladorAutenticacao {
             );
         } catch (Exception e) {
             System.err.println("❌ Erro ao remover foto: " + e.getMessage());
+            log.error("Erro ao remover foto de perfil", e);
             return ResponseEntity.status(500).body(
                 Map.of("sucesso", false, "mensagem", "Erro ao remover foto")
             );
@@ -183,9 +247,50 @@ public class ControladorAutenticacao {
      * Upload de foto de perfil (arquivo)
      * POST /api/auth/perfil/foto/upload
      */
-    @PostMapping("/perfil/foto/upload")
-    @Operation(summary = "Upload de foto de perfil", description = "Faz upload de arquivo de imagem para foto de perfil")
+    @PostMapping(value = "/perfil/foto/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+        summary = "Upload de foto de perfil",
+        description = """
+            Faz upload de arquivo de imagem para foto de perfil do usuário autenticado.
+            
+            **Formatos aceitos:** JPG, JPEG, PNG, WEBP, GIF
+            **Tamanho máximo:** 5MB
+            
+            **Exemplo de uso:**
+            ```javascript
+            const formData = new FormData();
+            formData.append('file', fotoFile);
+            
+            const response = await fetch('/api/auth/perfil/foto/upload', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${token}` },
+              body: formData
+            });
+            ```
+            """
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "Foto enviada com sucesso",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(
+                    example = """
+                    {
+                      "sucesso": true,
+                      "mensagem": "Foto enviada com sucesso",
+                      "fotoUrl": "http://localhost:8080/uploads/usuarios/user123.jpg"
+                    }
+                    """
+                )
+            )
+        ),
+        @ApiResponse(responseCode = "400", description = "Arquivo inválido ou muito grande"),
+        @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
     public ResponseEntity<?> uploadFotoPerfil(
+            @Parameter(description = "Arquivo de imagem da foto de perfil", required = true)
             @RequestParam("file") MultipartFile file,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
@@ -226,13 +331,13 @@ public class ControladorAutenticacao {
                 Map.of(
                     "sucesso", true,
                     "mensagem", "Foto enviada com sucesso",
-                    "fotoUrl", usuario.getFotoUrl()
+                    "fotoPerfil", usuario.getFotoPerfil()
                 )
             );
 
         } catch (Exception e) {
             System.err.println("❌ Erro ao fazer upload: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Erro ao fazer upload de foto de perfil", e);
             return ResponseEntity.status(500).body(
                 Map.of("sucesso", false, "mensagem", "Erro ao fazer upload: " + e.getMessage())
             );

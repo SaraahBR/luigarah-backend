@@ -53,6 +53,13 @@ wallet.zip
 *.crt
 
 # ============================
+# Arquivos de ambiente com credenciais
+# ============================
+.env
+.env.local
+.env.*.local
+
+# ============================
 # Docker
 # ============================
 /opt/app/wallet/
@@ -80,3 +87,8 @@ wallet.zip
 # Spring profiles locais
 # ============================
 /src/main/resources/application-local.properties
+
+# ============================
+# Uploads locais (imagens de desenvolvimento)
+# ============================
+uploads/

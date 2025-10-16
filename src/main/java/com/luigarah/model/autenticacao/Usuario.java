@@ -69,9 +69,9 @@ public class Usuario implements UserDetails {
     @Column(name = "GENERO", length = 20)
     private String genero;
 
-    @Size(max = 500, message = "Foto URL deve ter no máximo 500 caracteres")
-    @Column(name = "FOTO_URL", length = 500)
-    private String fotoUrl;
+    @Size(max = 500, message = "Foto de perfil deve ter no máximo 500 caracteres")
+    @Column(name = "FOTO_PERFIL", length = 500)
+    private String fotoPerfil;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "ROLE", nullable = false, length = 20)

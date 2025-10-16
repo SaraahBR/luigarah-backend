@@ -3,10 +3,11 @@
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.0-green.svg)](https://spring.io/projects/spring-boot)
 [![Oracle](https://img.shields.io/badge/Oracle-ADB-red.svg)](https://www.oracle.com/autonomous-database/)
+[![Cloudflare R2](https://img.shields.io/badge/Cloudflare-R2-orange.svg)](https://www.cloudflare.com/products/r2/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Production](https://img.shields.io/badge/production-Render-blue.svg)](https://luigarah-backend.onrender.com)
 
-> Sistema backend completo para e-commerce de moda com autenticação JWT, gerenciamento de produtos, carrinho de compras e lista de desejos.
+> Sistema backend completo para e-commerce de moda com autenticação JWT, gerenciamento de produtos, carrinho de compras, lista de desejos e **upload de imagens em nuvem**.
 
 **🌐 Produção:** https://luigarah-backend.onrender.com  
 **📚 Documentação API:** https://luigarah-backend.onrender.com/swagger-ui/index.html  
@@ -30,11 +31,14 @@
   - [📏 Módulo de Tamanhos](#-módulo-de-tamanhos)
   - [🏷️ Módulo de Identidades](#️-módulo-de-identidades)
   - [📊 Módulo de Estoque](#-módulo-de-estoque)
+  - [👥 Módulo de Administração de Usuários](#-módulo-de-administração-de-usuários)
+  - [📸 Módulo de Upload de Imagens (Storage)](#-módulo-de-upload-de-imagens-storage)
   - [⚙️ Configurações Globais](#️-configurações-globais)
   - [🛠️ Utilitários](#️-utilitários)
   - [⚠️ Tratamento de Exceções](#️-tratamento-de-exceções)
 - [🔒 Segurança e Autenticação](#-segurança-e-autenticação)
 - [🗄️ Banco de Dados](#️-banco-de-dados)
+- [📸 Sistema de Upload de Imagens](#-sistema-de-upload-de-imagens)
 - [📡 Endpoints da API](#-endpoints-da-api)
 - [🚀 Como Executar](#-como-executar)
 - [🌐 Deploy em Produção](#-deploy-em-produção)
@@ -46,19 +50,23 @@
 
 ## 🚀 Visão Geral
 
-O **Luigarah Backend** é uma API RESTful robusta e escalável desenvolvida para um e-commerce de moda. O sistema oferece gerenciamento completo de produtos, autenticação segura com JWT, carrinho de compras, lista de desejos e controle de estoque.
+O **Luigarah Backend** é uma API RESTful robusta e escalável desenvolvida para um e-commerce de moda. O sistema oferece gerenciamento completo de produtos, autenticação segura com JWT, carrinho de compras, lista de desejos, controle de estoque e **upload de imagens em nuvem com Cloudflare R2**.
 
 ### Características Principais
 
 - ✅ **Arquitetura Modular** - Organizado seguindo Clean Architecture e DDD
 - ✅ **Autenticação JWT** - Sistema completo com roles (USER/ADMIN)
+- ✅ **OAuth2 Social Login** - Google, Facebook, GitHub
 - ✅ **Segurança Avançada** - Spring Security + validação de senhas fortes
 - ✅ **Banco Oracle Cloud** - Oracle Autonomous Database (ADB) Always Free
+- ✅ **Upload de Imagens** - Cloudflare R2 (S3-compatible) em produção
+- ✅ **Storage Local** - Armazenamento em disco para desenvolvimento
 - ✅ **Documentação Automática** - Swagger/OpenAPI 3.0 completo
 - ✅ **Deploy Automatizado** - CI/CD no Render com Docker
 - ✅ **Migração de Dados** - Flyway para versionamento do banco
 - ✅ **Validação Robusta** - Bean Validation em todos os DTOs
 - ✅ **CORS Configurado** - Pronto para frontend em React/Next.js
+- ✅ **Conformidade LGPD** - Proteção total de dados sensíveis
 
 ---
 
@@ -73,12 +81,14 @@ O **Luigarah Backend** é uma API RESTful robusta e escalável desenvolvida para
 - **🆕 OAuth2 Social Login** - Google, Facebook, GitHub
 - **🆕 Sincronização OAuth** - Vinculação automática de contas sociais
 - Perfil de usuário (visualizar e editar)
+- **🆕 Gerenciamento de foto de perfil** - Upload ou URL
 
 ### 👥 Administração de Usuários (ADMIN)
 - **Visualizar usuários** - Listar todos os usuários com paginação
 - **Buscar usuários** - Por nome, email, role ou status
 - **Editar usuários** - Alterar nome, sobrenome, email, telefone e role
 - **Desativar/Ativar usuários** - Soft delete (mantém dados no banco)
+- **🆕 Gerenciar foto de perfil** - Alterar foto de qualquer usuário (URL ou upload)
 - **Estatísticas** - Contadores de usuários ativos, inativos, por role
 - **Conformidade LGPD** - Dados sensíveis protegidos (senha, documentos nunca expostos)
 - **Auditoria** - Logs de todas as operações administrativas
@@ -90,8 +100,17 @@ O **Luigarah Backend** é uma API RESTful robusta e escalável desenvolvida para
 - Busca e filtragem de produtos (público)
 - Produtos com múltiplas identidades (cores/variações)
 - Sistema de tamanhos customizável
-- Upload e gerenciamento de imagens
+- **🆕 Upload e gerenciamento de imagens** - Cloudflare R2 (produção) ou local (desenvolvimento)
 - Categorização e organização
+
+### 📸 Upload de Imagens
+- **🆕 Upload para Cloudflare R2** - Storage S3-compatible em produção
+- **🆕 Armazenamento local** - Para desenvolvimento (perfil local)
+- **🆕 Validação de arquivos** - Formatos aceitos: JPG, JPEG, PNG, WEBP, GIF
+- **🆕 Limite de tamanho** - Máximo 5MB por arquivo
+- **🆕 Upload múltiplo** - Até 10 imagens simultaneamente
+- **🆕 Pastas organizadas** - produtos, usuarios, outros
+- **🆕 URLs públicas** - Acesso direto às imagens uploadadas
 
 ### 🛒 Carrinho de Compras
 - Adicionar produtos ao carrinho
@@ -136,7 +155,7 @@ O projeto segue rigorosamente os princípios de **Clean Architecture** e **Domai
 - **Independência de UI** - Backend desacoplado do frontend
 
 #### 🎯 Domain-Driven Design
-- **Módulos por Domínio** - 7 módulos funcionais independentes
+- **Módulos por Domínio** - 9 módulos funcionais independentes
 - **Bounded Contexts** - Contextos delimitados e isolados
 - **Entities e Value Objects** - Modelagem rica de domínio
 - **Repositories** - Abstração de persistência
@@ -209,6 +228,16 @@ O projeto segue rigorosamente os princípios de **Clean Architecture** e **Domai
 | **OSDT Core** | 21.11.0.0 | Oracle Security Developer Tools |
 | **OSDT Cert** | 21.11.0.0 | Certificados SSL/TLS |
 
+### 📸 Upload de Imagens e Storage
+
+| Biblioteca | Versão | Função |
+|------------|--------|--------|
+| **AWS SDK S3** | 2.20+ | Cliente S3 para Cloudflare R2 |
+| **AWS SDK Core** | 2.20+ | Core do SDK AWS |
+| **Spring Multipart** | 3.2.0 | Upload de arquivos via HTTP |
+
+> **Cloudflare R2** é compatível com a API S3 da AWS, permitindo usar o AWS SDK sem modificações.
+
 ### 📚 Documentação
 
 | Biblioteca | Versão | Função |
@@ -255,6 +284,9 @@ luigara-backend/
 ├── LICENSE                                  # Licença MIT
 ├── pom.xml                                  # Configuração Maven e dependências
 ├── README.md                                # Este arquivo
+├── ORACLE_ACL_FIX.md                        # Correção de ACL Oracle
+├── SETUP_LOCAL.md                           # Guia de setup local
+├── UPLOAD_IMAGES_GUIDE.md                   # 🆕 Guia de upload de imagens
 │
 ├── src/                                     # Código-fonte
 │   ├── main/
@@ -265,16 +297,20 @@ luigara-backend/
 │   │   │           │
 │   │   │           ├── config/                                # ⚙️ Configurações Globais
 │   │   │           │   ├── ConfiguracaoCors.java              # CORS para frontend
+│   │   │           │   ├── DotEnvConfig.java                  # Carregamento de variáveis .env
 │   │   │           │   ├── FlywayRepairConfig.java            # Configuração Flyway
 │   │   │           │   ├── JacksonStringSanitizerConfig.java  # Sanitização JSON
 │   │   │           │   ├── JwtAuthenticationFilter.java       # Filtro JWT
 │   │   │           │   ├── JwtTokenProvider.java              # Geração/validação JWT
+│   │   │           │   ├── LocalStorageConfig.java            # 🆕 Config storage local
 │   │   │           │   ├── OpenApiConfig.java                 # Swagger/OpenAPI
-│   │   │           │   └── SecurityConfig.java                # Spring Security
+│   │   │           │   ├── OracleWalletConfig.java            # Config wallet Oracle
+│   │   │           │   ├── SecurityConfig.java                # Spring Security
+│   │   │           │   └── WebMvcConfig.java                  # 🆕 Config MVC e recursos estáticos
 │   │   │           │
 │   │   │           ├── controller/                            # 🎮 Controladores REST
-│   │   │           │   ├── autenticao/
-│   │   │           │   │   └── AuthController.java            # Login, registro, perfil
+│   │   │           │   ├── autenticacao/
+│   │   │           │   │   └── ControladorAutenticacao.java   # Login, registro, perfil, foto
 │   │   │           │   ├── carrinho/
 │   │   │           │   │   └── CarrinhoController.java        # Carrinho de compras
 │   │   │           │   ├── doc/                               # Documentação OpenAPI
@@ -296,10 +332,13 @@ luigara-backend/
 │   │   │           │   ├── produto/
 │   │   │           │   │   ├── ControladorProduto.java        # CRUD produtos
 │   │   │           │   │   └── ControladorProdutoIdentidade.java
+│   │   │           │   ├── storage/                           # 🆕 Upload de Imagens
+│   │   │           │   │   └── ImageUploadController.java     # Upload para R2/Local
 │   │   │           │   ├── tamanho/
 │   │   │           │   │   ├── ControladorTamanho.java        # CRUD tamanhos
 │   │   │           │   │   └── PadraoTamanhoController.java   # Padrões (P, M, G)
 │   │   │           │   └── usuario/
+│   │   │           │       ├── EnderecoController.java        # Gerenciar endereços
 │   │   │           │       └── UsuarioAdminController.java    # Admin usuários
 │   │   │           │
 │   │   │           ├── dto/                                   # 📦 Data Transfer Objects
@@ -307,7 +346,7 @@ luigara-backend/
 │   │   │           │   │   ├── AlterarSenhaRequestDTO.java
 │   │   │           │   │   ├── AuthResponseDTO.java
 │   │   │           │   │   ├── LoginRequestDTO.java
-│   │   │           │   │   │   └── OAuthSyncRequest.java            # 🆕 Request OAuth Sync
+│   │   │           │   │   ├── OAuthSyncRequest.java          # 🆕 Request OAuth Sync
 │   │   │           │   │   └── RegistroRequestDTO.java
 │   │   │           │   ├── carrinho/
 │   │   │           │   │   ├── CarrinhoItemDTO.java
@@ -326,12 +365,15 @@ luigara-backend/
 │   │   │           │   │   ├── ProdutoDTO.java
 │   │   │           │   │   ├── ProdutoIdentidadeDTO.java
 │   │   │           │   │   └── RespostaProdutoDTO.java
+│   │   │           │   ├── storage/                           # 🆕 DTOs de Upload
+│   │   │           │   │   └── ImageUploadResponse.java       # Response de upload
 │   │   │           │   ├── tamanho/
 │   │   │           │   │   ├── PadraoAtualizacaoDTO.java
 │   │   │           │   │   ├── PadraoItemDTO.java
 │   │   │           │   │   ├── ProdutoTamanhoDTO.java
 │   │   │           │   │   └── TamanhoDTO.java
 │   │   │           │   └── usuario/
+│   │   │           │       ├── AtualizarPerfilRequest.java    # Request atualizar perfil
 │   │   │           │       ├── EnderecoDTO.java
 │   │   │           │       ├── UsuarioAdminDTO.java
 │   │   │           │       ├── UsuarioAdminUpdateDTO.java
@@ -418,6 +460,10 @@ luigara-backend/
 │   │   │           │   │   │   └── ServicoProdutoImpl.java
 │   │   │           │   │   ├── ServicoProduto.java
 │   │   │           │   │   └── ServicoProdutoIdentidade.java
+│   │   │           │   ├── storage/                           # 🆕 Serviços de Upload
+│   │   │           │   │   ├── ImageStorageService.java       # Interface storage
+│   │   │           │   │   ├── LocalImageStorageService.java  # Storage local (dev)
+│   │   │           │   │   └── S3ImageStorageService.java     # Storage R2 (prod)
 │   │   │           │   ├── tamanho/
 │   │   │           │   │   ├── impl/
 │   │   │           │   │   │   ├── ServicoPadraoTamanhoImpl.java
@@ -436,8 +482,14 @@ luigara-backend/
 │   │   │               └── HomeController.java                # Página inicial
 │   │   │
 │   │   └── resources/                                         # Recursos
+│   │       ├── application.properties                         # Config principal
 │   │       ├── application-local.properties                   # Config ambiente local
-│   │       ├── application-prod.properties                    # Config produção
+│   │       ├── application-prod.properties                    # Config produção + R2
+│   │       ├── static/                                        # 🆕 Arquivos estáticos (HTML, CSS)
+│   │       ├── uploads/                                       # 🆕 Upload local (development)
+│   │       │   ├── produtos/                                  # Imagens de produtos
+│   │       │   ├── usuarios/                                  # Fotos de perfil
+│   │       │   └── outros/                                    # Outras imagens
 │   │       └── db/
 │   │           └── migration/                                 # Migrações Flyway
 │   │               ├── V1__schema.sql                         # Schema inicial
@@ -446,10 +498,11 @@ luigara-backend/
 │   │
 │   └── test/                                                  # 🧪 Testes
 │       └── java/
+│           ├── TestCORS.java                                  # Teste CORS
 │           └── com/
 │               └── luigarah/
-│                   ├── PasswordTest.java                      # Teste de senhas
 │                   └── service/
+│                       ├── PasswordTest.java                  # Teste de senhas
 │                       └── impl/
 │                           ├── ServicoEstoqueImplTest.java    # Teste estoque
 │                           └── ServicoTamanhoImplTest.java    # Teste tamanhos
@@ -463,33 +516,35 @@ luigara-backend/
 
 ### 📊 Estatísticas do Projeto
 
-- **Total de Pacotes:** 32+
-- **Total de Classes Java:** 100+
-- **Controllers:** 10
-- **Services:** 12+
+- **Total de Pacotes:** 40+
+- **Total de Classes Java:** 120+
+- **Controllers:** 12
+- **Services:** 15+
 - **Repositories:** 12
-- **DTOs:** 25+
+- **DTOs:** 30+
 - **Entities (Models):** 12
-- **Mappers:** 6
-- **Configurações:** 7
+- **Mappers:** 7
+- **Configurações:** 10
 - **Exceções Customizadas:** 4
 - **Utilitários:** 3
-- **Testes:** 3+
+- **Testes:** 5+
 
 ### 📦 Módulos Funcionais
 
-O projeto está **100% organizado em 7 módulos funcionais independentes**:
+O projeto está **100% organizado em 9 módulos funcionais independentes**:
 
 ```
 src/main/java/com/luigarah/
 │
-├── 🔐 autenticacao/     # Autenticação, login, registro, JWT
+├── 🔐 autenticacao/     # Autenticação, login, registro, JWT, OAuth
 ├── 📦 produto/          # Produtos e suas identidades
 ├── 🛒 carrinho/         # Carrinho de compras
 ├── ❤️  listadesejos/    # Lista de desejos/favoritos
 ├── 📏 tamanho/          # Tamanhos e padrões
 ├── 🏷️  identidade/      # Identidades de produtos (cores/variações)
-└── 📊 estoque/          # Controle de estoque
+├── 📊 estoque/          # Controle de estoque
+├── 👥 usuario/          # Administração de usuários (ADMIN)
+└── 📸 storage/          # 🆕 Upload de imagens (R2/Local)
 ```
 
 Cada módulo possui suas próprias camadas isoladas:
@@ -509,12 +564,15 @@ controller/{modulo}/  → service/{modulo}/  → repository/{modulo}/
 #### 📁 Arquivos e Funções
 
 **Controllers:**
-- `AuthController.java` - Endpoints de autenticação
+- `ControladorAutenticacao.java` - Endpoints de autenticação
   - POST `/api/auth/login` - Login com email/senha
   - POST `/api/auth/registrar` - Registro de novo usuário
   - POST `/api/auth/oauth/sync` - 🆕 Sincronizar conta OAuth (Google/Facebook/GitHub)
   - GET `/api/auth/perfil` - Visualizar perfil (autenticado)
   - PUT `/api/auth/perfil` - Atualizar perfil (autenticado)
+  - PUT `/api/auth/perfil/foto` - 🆕 Atualizar foto de perfil por URL (autenticado)
+  - POST `/api/auth/perfil/foto/upload` - 🆕 Upload de foto de perfil (autenticado)
+  - DELETE `/api/auth/perfil/foto` - 🆕 Remover foto de perfil (autenticado)
   - PUT `/api/auth/alterar-senha` - Alterar senha (autenticado)
 
 **Services:**
@@ -747,348 +805,217 @@ controller/{modulo}/  → service/{modulo}/  → repository/{modulo}/
 
 ---
 
-### ⚙️ Configurações Globais
+### 👥 Módulo de Administração de Usuários
 
-**Localização:** `com.luigarah.config`
-
-#### 📁 Arquivos e Funções
-
-| Arquivo | Função |
-|---------|--------|
-| `SecurityConfig.java` | **Configuração de segurança**<br>- Define endpoints públicos vs autenticados<br>- Configura filtros JWT<br>- Habilita CORS<br>- Desabilita CSRF (API REST stateless) |
-| `JwtTokenProvider.java` | **Provedor de tokens JWT**<br>- Gera tokens JWT assinados<br>- Valida tokens<br>- Extrai claims (usuário, role, expiração) |
-| `JwtAuthenticationFilter.java` | **Filtro de autenticação**<br>- Intercepta requisições<br>- Extrai token do header Authorization<br>- Valida e autentica usuário no contexto do Spring Security |
-| `ConfiguracaoCors.java` | **Configuração CORS**<br>- Define origens permitidas (localhost, Vercel)<br>- Habilita métodos HTTP (GET, POST, PUT, DELETE)<br>- Permite headers customizados |
-| `OpenApiConfig.java` | **Configuração Swagger/OpenAPI**<br>- Define informações da API (título, descrição, versão)<br>- Configura autenticação JWT no Swagger UI<br>- Organiza endpoints por tags |
-| `FlywayRepairConfig.java` | **Configuração Flyway**<br>- Repair automático em caso de falhas<br>- Validação de migrações |
-| `JacksonStringSanitizerConfig.java` | **Sanitização de strings**<br>- Remove caracteres invisíveis<br>- Previne injeção de XSS<br>- Normaliza entradas JSON |
-
----
-
-### 🛠️ Utilitários
-
-**Localização:** `com.luigarah.util`
+**Localização:** `com.luigarah.controller.usuario`, `service.usuario`, etc.
 
 #### 📁 Arquivos e Funções
 
-| Arquivo | Função |
-|---------|--------|
-| `GerarHashSenha.java` | **Utilitário para gerar hash BCrypt**<br>- Gera hash de senhas para testes<br>- Usado para criar senha do admin padrão<br>- Executável via main() |
-| `JsonStringCleaner.java` | **Limpeza de strings JSON**<br>- Remove caracteres invisíveis<br>- Remove espaços extras<br>- Previne ataques de injeção |
-| `UrlCleaner.java` | **Validação e limpeza de URLs**<br>- Valida formato de URLs<br>- Remove scripts maliciosos<br>- Sanitiza URLs de imagens |
+**Controllers:**
+- `UsuarioAdminController.java` - Gestão de usuários (ADMIN apenas)
+  - GET `/api/admin/usuarios` - Listar todos os usuários
+  - GET `/api/admin/usuarios/paginado` - Listar com paginação
+  - GET `/api/admin/usuarios/{id}` - Buscar usuário por ID
+  - GET `/api/admin/usuarios/buscar/nome` - Buscar por nome
+  - GET `/api/admin/usuarios/buscar/email` - Buscar por email
+  - GET `/api/admin/usuarios/buscar/role/{role}` - Buscar por role
+  - GET `/api/admin/usuarios/buscar/status/{ativo}` - Buscar por status
+  - PUT `/api/admin/usuarios/{id}` - Atualizar usuário
+  - PATCH `/api/admin/usuarios/{id}/desativar` - Desativar usuário
+  - PATCH `/api/admin/usuarios/{id}/ativar` - Ativar usuário
+  - PUT `/api/admin/usuarios/{id}/foto` - 🆕 Atualizar foto por URL (ADMIN)
+  - POST `/api/admin/usuarios/{id}/foto/upload` - 🆕 Upload de foto (ADMIN)
+  - DELETE `/api/admin/usuarios/{id}/foto` - 🆕 Remover foto (ADMIN)
+  - GET `/api/admin/usuarios/estatisticas` - Estatísticas de usuários
+
+- `EnderecoController.java` - Gestão de endereços do usuário
+  - GET `/api/enderecos` - Listar endereços do usuário autenticado
+  - POST `/api/enderecos` - Adicionar novo endereço
+  - PUT `/api/enderecos/{id}` - Atualizar endereço
+  - DELETE `/api/enderecos/{id}` - Deletar endereço
+  - PATCH `/api/enderecos/{id}/principal` - Definir como principal
+
+**Services:**
+- `UsuarioAdminService.java` - Lógica de administração de usuários
+  - Listagem, busca, atualização de usuários
+  - Desativação/ativação de contas
+  - Gerenciamento de foto de perfil
+  - Estatísticas e contadores
+  - Conformidade LGPD
+
+**Models:**
+- `Usuario.java` - Entidade principal de usuário
+- `Endereco.java` - Entidade de endereço
+
+**DTOs:**
+- `UsuarioAdminDTO.java` - DTO para visualização admin (sem dados sensíveis)
+- `UsuarioAdminUpdateDTO.java` - DTO para atualização admin
+- `EnderecoDTO.java` - DTO de endereço
+
+**Repositories:**
+- `UsuarioRepository.java` - Acesso a dados de usuários
+- `EnderecoRepository.java` - Acesso a dados de endereços
+
+**Mappers:**
+- `UsuarioMapper.java` - Conversão Usuario ↔ DTOs
+- `EnderecoMapper.java` - Conversão Endereco ↔ DTO
 
 ---
 
-### ⚠️ Tratamento de Exceções
+### 📸 Módulo de Upload de Imagens (Storage)
 
-**Localização:** `com.luigarah.exception`
+**Localização:** `com.luigarah.controller.storage`, `service.storage`, etc.
 
 #### 📁 Arquivos e Funções
 
-| Arquivo | Função |
-|---------|--------|
-| `GlobalExceptionHandler.java` | **Tratamento global de exceções**<br>- Captura todas as exceções não tratadas<br>- Retorna respostas padronizadas (JSON)<br>- Log de erros<br>- Previne exposição de stack traces |
-| `RecursoNaoEncontradoException.java` | **Exceção para recursos não encontrados**<br>- HTTP 404<br>- Usado quando produto, usuário, etc. não existe |
-| `RegraDeNegocioException.java` | **Exceção de regras de negócio**<br>- HTTP 400<br>- Usado para validações de negócio<br>- Ex: "Produto sem estoque", "Senha incorreta" |
-| `ProductNotFoundException.java` | **Exceção específica de produto**<br>- HTTP 404<br>- Usado em buscas de produtos |
+**Controllers:**
+- `ImageUploadController.java` - Endpoints de upload de imagens
+  - POST `/api/imagens/upload` - Upload de uma imagem
+  - POST `/api/imagens/upload/multiple` - Upload de múltiplas imagens (máx. 10)
 
----
+**Services:**
+- `ImageStorageService.java` - **Interface de storage**
+  - Abstração para diferentes implementações (local/cloud)
+  - Métodos: save(), isValidImageType(), generateKey()
 
-### 📚 Documentação dos Controllers
+- `LocalImageStorageService.java` - **Implementação para desenvolvimento**
+  - Ativo apenas no perfil `local`
+  - Salva arquivos em `src/main/resources/uploads/`
+  - URLs acessíveis via `http://localhost:8080/uploads/...`
 
-**Localização:** `com.luigarah.controller.doc`
+- `S3ImageStorageService.java` - **Implementação para produção**
+  - Ativo em todos os perfis exceto `local`
+  - Upload para Cloudflare R2 (S3-compatible)
+  - URLs públicas do bucket R2
 
-Todos os 9 controllers possuem interfaces de documentação Swagger:
+**DTOs:**
+- `ImageUploadResponse.java` - Resposta de upload com URL, metadata
 
-| Arquivo | Controller Documentado |
-|---------|------------------------|
-| `AuthControllerDoc.java` | Autenticação e perfil |
-| `CarrinhoControllerDoc.java` | Carrinho de compras |
-| `EstoqueControllerDoc.java` | Gestão de estoque |
-| `IdentidadeControllerDoc.java` | Identidades de produtos |
-| `ListaDesejoControllerDoc.java` | Lista de desejos |
-| `PadraoTamanhoControllerDoc.java` | Padrões de tamanhos |
-| `ProdutoControllerDoc.java` | CRUD de produtos |
-| `ProdutoIdentidadeControllerDoc.java` | Produtos com identidades |
-| `TamanhoControllerDoc.java` | CRUD de tamanhos |
+**Configurações:**
+- `LocalStorageConfig.java` - Configura pasta de uploads locais
+- `WebMvcConfig.java` - Mapeia `/uploads/` para recursos estáticos
 
----
+#### 🔑 Funcionamento
 
-## 🔒 Segurança e Autenticação
-
-### 🛡️ Spring Security
-
-O projeto utiliza **Spring Security 6** com as seguintes configurações:
-
-#### Endpoints Públicos (sem autenticação)
-- ✅ GET `/api/produtos/**` - Listagem de produtos
-- ✅ GET `/api/tamanhos/**` - Listagem de tamanhos
-- ✅ GET `/api/identidades/**` - Listagem de identidades
-- ✅ GET `/api/estoque/**` - Consulta de estoque
-- ✅ POST `/api/auth/login` - Login
-- ✅ POST `/api/auth/registrar` - Registro
-- ✅ `/swagger-ui/**` - Documentação Swagger
-- ✅ `/v3/api-docs/**` - OpenAPI JSON
-
-#### Endpoints Autenticados (requer token JWT)
-- 🔐 Todos os endpoints de escrita (POST, PUT, DELETE)
-- 🔐 Carrinho de compras
-- 🔐 Lista de desejos
-- 🔐 Perfil de usuário
-
-#### Endpoints Restritos (apenas ADMIN)
-- 🔒 POST/PUT/DELETE `/api/produtos/**`
-- 🔒 POST/PUT/DELETE `/api/tamanhos/**`
-- 🔒 POST/PUT/DELETE `/api/identidades/**`
-- 🔒 PATCH `/api/estoque/**`
-- 🔒 **Todos os endpoints** `/api/admin/usuarios/**`
-
-### 🛡️ Proteção de Dados (LGPD)
-
-O sistema implementa **proteção total de dados sensíveis** conforme a Lei Geral de Proteção de Dados (LGPD):
-
-#### Dados Nunca Expostos pela API:
-- ❌ **Senhas** (armazenadas apenas como hash BCrypt)
-- ❌ **Documentos** (CPF, RG, passaporte)
-- ❌ **Dados bancários** (cartões de crédito, contas)
-- ❌ **Informações médicas**
-- ❌ **Dados biométricos**
-
-#### Dados Visíveis apenas ao Próprio Usuário:
-- ✅ Próprio perfil completo (via `/api/auth/perfil`)
-- ✅ Próprio histórico de pedidos
-- ✅ Próprios endereços de entrega
-
-#### Dados Visíveis ao ADMIN (sem dados sensíveis):
-- ✅ Nome, sobrenome, email
-- ✅ Telefone, data de nascimento, gênero
-- ✅ Role, status ativo/inativo
-- ✅ Provedor de autenticação
-- ❌ **NUNCA:** senha, documentos, dados sensíveis
-
-#### Permissões do ADMIN:
-**PODE:**
-- ✅ Visualizar lista de usuários (sem dados sensíveis)
-- ✅ Editar nome, sobrenome, email, telefone
-- ✅ Alterar role (USER ↔ ADMIN)
-- ✅ Desativar/ativar usuários
-- ✅ Ver estatísticas gerais
-
-**NÃO PODE:**
-- ❌ Ver ou alterar senhas de usuários
-- ❌ Acessar dados sensíveis (documentos, etc.)
-- ❌ Fazer login como outro usuário
-- ❌ Deletar usuários permanentemente (apenas desativar)
-
-#### Logs e Auditoria:
-- 📝 Todas as operações administrativas são logadas
-- 📝 Registro de quem alterou o quê e quando
-- 📝 Conformidade com Art. 48 da LGPD
-
-### 🔑 Autenticação JWT
-
-**Fluxo de Autenticação:**
-
-```
-1. Usuário faz login → POST /api/auth/login { email, senha }
-2. Backend valida credenciais (BCrypt)
-3. Backend gera token JWT assinado (HS256)
-4. Token retornado para o cliente
-5. Cliente inclui token em requisições: Authorization: Bearer {token}
-6. JwtAuthenticationFilter valida token
-7. Spring Security autentica usuário no contexto
-8. Requisição processada com usuário autenticado
+**Desenvolvimento (perfil local):**
+```properties
+# application-local.properties
+storage.local.basePath=uploads
+storage.local.baseUrl=http://localhost:8080/uploads
 ```
 
-**Estrutura do Token JWT:**
-
-```json
-{
-  "header": {
-    "alg": "HS256",
-    "typ": "JWT"
-  },
-  "payload": {
-    "sub": "usuario@example.com",
-    "role": "USER",
-    "iat": 1697280000,
-    "exp": 1697366400
-  },
-  "signature": "..."
-}
+**Produção (Cloudflare R2):**
+```properties
+# application-prod.properties
+storage.bucket=luigarah-prod
+storage.publicBaseUrl=https://[ACCOUNT_ID].r2.cloudflarestorage.com/luigarah-prod
+aws.region=auto-r2
+aws.s3.endpoint=https://[ACCOUNT_ID].r2.cloudflarestorage.com
+aws.credentials.accessKey=${AWS_ACCESS_KEY_ID}
+aws.credentials.secretKey=${AWS_SECRET_ACCESS_KEY}
 ```
+
+#### 🔄 Funcionamento
+
+**Upload de Imagem:**
+```
+1. Cliente → POST /api/imagens/upload
+2. Backend valida arquivo (tipo, tamanho)
+3. Backend gera key única: "produtos/1705234567890-produto.jpg"
+4. Backend faz upload para R2 via AWS SDK
+5. Backend retorna URL pública: 
+   "https://[ACCOUNT_ID].r2.cloudflarestorage.com/luigarah-prod/produtos/1705234567890-produto.jpg"
+6. Frontend usa URL para exibir imagem
+```
+
+#### 📦 Estrutura de Pastas no R2
+
+```
+luigara-prod/                    # Bucket
+├── produtos/                     # Imagens de produtos
+│   ├── 1705234567890-produto1.jpg
+│   ├── 1705234568901-produto2.png
+│   └── ...
+├── usuarios/                     # Fotos de perfil
+│   ├── 1705234569012-user1.jpg
+│   ├── 1705234570123-user2.png
+│   └── ...
+└── outros/                       # Outras imagens
+    └── ...
+```
+
+### 💾 Storage Local - Desenvolvimento
+
+Em ambiente de desenvolvimento (perfil `local`), as imagens são salvas em disco.
 
 **Configuração:**
-- **Algoritmo:** HS256 (HMAC SHA-256)
-- **Secret:** Mínimo 256 bits (configurável via variável de ambiente)
-- **Expiração:** 24 horas (86400000ms) - configurável
-- **Claims:** email (sub), role, issued at, expiration
-
-### 🔐 Validação de Senhas Fortes
-
-**Requisitos obrigatórios:**
-- ✅ Mínimo 6 caracteres
-- ✅ Máximo 100 caracteres
-- ✅ Pelo menos 1 letra maiúscula (A-Z)
-- ✅ Pelo menos 1 letra minúscula (a-z)
-- ✅ Pelo menos 1 número (0-9)
-- ✅ Pelo menos 1 caractere especial (@$!%*?&)
-
-**Regex de validação:**
-```regex
-^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,100}$
-```
-
-**Exemplos:**
-- ✅ `Admin@123` - Válida
-- ✅ `MinhaSenh@Segura2025!` - Válida
-- ❌ `admin123` - Sem maiúscula e sem especial
-- ❌ `ADMIN@123` - Sem minúscula
-
-### 🔒 Hash de Senhas - BCrypt
-
-- **Algoritmo:** BCrypt com salt automático
-- **Strength:** 10 rounds (padrão Spring Security)
-- **Armazenamento:** Apenas hash no banco, nunca senha em texto plano
-
----
-
-## 🗄️ Banco de Dados
-
-### ☁️ Oracle Autonomous Database (ADB)
-
-**Ambiente de Produção:**
-- **Plataforma:** Oracle Cloud Infrastructure (OCI)
-- **Tier:** Always Free (gratuito permanentemente)
-- **Tipo:** Autonomous Transaction Processing (ATP)
-- **Conexão:** Wallet seguro (mTLS)
-- **Schema:** `APP_LUIGARAH`
-
-### 📊 Estrutura de Tabelas
-
-O banco possui **9 tabelas principais**:
-
-#### 1. **USUARIOS** - Usuários do sistema
-```sql
-Campos principais:
-- ID (PK, auto-increment via sequence)
-- NOME, SOBRENOME, EMAIL (unique)
-- SENHA (hash BCrypt)
-- TELEFONE, DATA_NASCIMENTO, GENERO
-- ROLE (USER/ADMIN)
-- PROVIDER (LOCAL/GOOGLE/FACEBOOK)
-- ATIVO, EMAIL_VERIFICADO
-- DATA_CRIACAO, DATA_ATUALIZACAO, ULTIMO_ACESSO
-```
-
-#### 2. **ENDERECOS** - Endereços de entrega
-```sql
-Campos principais:
-- ID (PK)
-- USUARIO_ID (FK → USUARIOS)
-- PAIS, ESTADO, CIDADE, CEP
-- RUA, NUMERO, COMPLEMENTO, BAIRRO
-- PRINCIPAL (boolean)
-```
-
-#### 3. **PRODUTOS** - Catálogo de produtos
-```sql
-Campos principais:
-- ID (PK)
-- NOME, DESCRICAO
-- PRECO (NUMBER 10,2)
-- CATEGORIA, TIPO_PRODUTO
-- IMAGEM_URL, IMAGEM_URL_SECUNDARIA
-- IDENTIDADE_ID (FK → IDENTIDADES)
-- ATIVO, DATA_CRIACAO
-```
-
-#### 4. **IDENTIDADES** - Cores/variações de produtos
-```sql
-Campos principais:
-- ID (PK)
-- NOME (ex: "Azul Marinho")
-- COR_HEX (ex: "#003366")
-- IMAGEM_URL
-- ATIVO
-```
-
-#### 5. **TAMANHOS** - Tamanhos disponíveis
-```sql
-Campos principais:
-- ID (PK)
-- NOME (ex: "Pequeno")
-- SIGLA (ex: "P")
-- ORDEM (para ordenação)
-- ATIVO
-```
-
-#### 6. **PRODUTO_TAMANHO** - Relação produto-tamanho com estoque
-```sql
-Campos principais:
-- PRODUTO_ID (PK, FK → PRODUTOS)
-- TAMANHO_ID (PK, FK → TAMANHOS)
-- QUANTIDADE_ESTOQUE
-```
-
-#### 7. **CARRINHO_ITENS** - Itens no carrinho
-```sql
-Campos principais:
-- ID (PK)
-- USUARIO_ID (FK → USUARIOS)
-- PRODUTO_ID (FK → PRODUTOS)
-- TAMANHO_ID (FK → TAMANHOS, nullable)
-- QUANTIDADE
-- DATA_CRIACAO
-```
-
-#### 8. **LISTA_DESEJO_ITENS** - Items na lista de desejos
-```sql
-Campos principais:
-- ID (PK)
-- USUARIO_ID (FK → USUARIOS)
-- PRODUTO_ID (FK → PRODUTOS)
-- DATA_CRIACAO
-```
-
-#### 9. **PADROES_TAMANHOS** - Padrões de tamanhos por produto
-```sql
-Campos principais:
-- ID (PK)
-- PRODUTO_ID (FK → PRODUTOS)
-- PADRAO (PP/P/M/G/GG/XG/XXG/UNICO)
-```
-
-### 🔄 Migração com Flyway
-
-**Scripts de Migração:** `src/main/resources/db/migration/`
-
-| Script | Descrição |
-|--------|-----------|
-| `V1__schema.sql` | Criação de todas as tabelas, sequences, constraints e índices |
-| `V2__seed_tamanhos.sql` | Dados iniciais de tamanhos padrão (PP, P, M, G, GG, XG, XXG, ÚNICO) |
-| `V3__data.sql` | Dados de exemplo (produtos, identidades, etc.) |
-
-**Funcionamento:**
-- Flyway executa automaticamente na inicialização
-- Versionamento de esquema (histórico na tabela FLYWAY_SCHEMA_HISTORY)
-- Migrations aplicadas apenas uma vez
-- Validação de checksums para integridade
-
-### 🔗 Pool de Conexões - HikariCP
-
-**Configuração de Produção:**
 ```properties
-maximum-pool-size=5      # Máximo 5 conexões simultâneas
-minimum-idle=2           # Mínimo 2 conexões ociosas
-idle-timeout=600000      # 10 minutos
-connection-timeout=30000 # 30 segundos
+# application-local.properties
+storage.local.basePath=uploads
+storage.local.baseUrl=http://localhost:8080/uploads
 ```
 
-**Por que pool pequeno?**
-- Oracle ADB Always Free tem limite de conexões
-- Render Free Tier tem recursos limitados
-- Pool otimizado para web services REST
+**Estrutura de Pastas:**
+```
+src/main/resources/
+└── uploads/
+    ├── produtos/
+    ├── usuarios/
+    └── outros/
+```
+
+**URLs geradas:**
+```
+http://localhost:8080/uploads/produtos/1705234567890-produto.jpg
+http://localhost:8080/uploads/usuarios/1705234569012-user1.jpg
+```
+
+### 🔐 AWS SDK para Java v2
+
+O projeto utiliza o **AWS SDK for Java v2** para comunicação com Cloudflare R2:
+
+**Dependências no pom.xml:**
+```xml
+<dependency>
+    <groupId>software.amazon.awssdk</groupId>
+    <artifactId>s3</artifactId>
+    <version>2.20.26</version>
+</dependency>
+```
+
+**Configuração do Cliente S3:**
+```java
+S3Client s3 = S3Client.builder()
+    .region(Region.of("auto-r2"))
+    .endpointOverride(URI.create("https://[ACCOUNT_ID].r2.cloudflarestorage.com"))
+    .credentialsProvider(StaticCredentialsProvider.create(
+        AwsBasicCredentials.create(accessKey, secretKey)
+    ))
+    .serviceConfiguration(S3Configuration.builder()
+        .pathStyleAccessEnabled(true)
+        .build())
+    .build();
+```
+
+### 📊 Limites e Recomendações
+
+**Limites Configurados:**
+- ✅ Tamanho máximo por arquivo: **5MB**
+- ✅ Upload múltiplo: **10 arquivos** simultaneamente
+- ✅ Tamanho máximo da requisição: **10MB**
+
+**Formatos Aceitos:**
+- ✅ JPG/JPEG
+- ✅ PNG
+- ✅ WEBP
+- ✅ GIF
+
+**Boas Práticas:**
+- ✅ Sempre validar tipo MIME no backend
+- ✅ Gerar nomes únicos (evitar colisões)
+- ✅ Organizar em pastas lógicas
+- ✅ Configurar CORS no R2 para acesso direto do frontend
+- ✅ Considerar CDN para cache (Cloudflare CDN)
 
 ---
 
@@ -1103,7 +1030,36 @@ connection-timeout=30000 # 30 segundos
 | POST | `/api/auth/oauth/sync` | 🆕 Sincronizar conta OAuth (Google/Facebook/GitHub) | ❌ | - |
 | GET | `/api/auth/perfil` | Visualizar perfil | ✅ | USER |
 | PUT | `/api/auth/perfil` | Atualizar perfil | ✅ | USER |
+| PUT | `/api/auth/perfil/foto` | 🆕 Atualizar foto de perfil por URL | ✅ | USER |
+| POST | `/api/auth/perfil/foto/upload` | 🆕 Upload de foto de perfil | ✅ | USER |
+| DELETE | `/api/auth/perfil/foto` | 🆕 Remover foto de perfil | ✅ | USER |
 | PUT | `/api/auth/alterar-senha` | Alterar senha | ✅ | USER |
+
+### 👥 Administração de Usuários (`/api/admin/usuarios`)
+
+| Método | Endpoint | Descrição | Auth | Role |
+|--------|----------|-----------|------|------|
+| GET | `/api/admin/usuarios` | Listar todos os usuários | ✅ | ADMIN |
+| GET | `/api/admin/usuarios/paginado` | Listar com paginação | ✅ | ADMIN |
+| GET | `/api/admin/usuarios/{id}` | Buscar por ID | ✅ | ADMIN |
+| GET | `/api/admin/usuarios/buscar/nome` | Buscar por nome | ✅ | ADMIN |
+| GET | `/api/admin/usuarios/buscar/email` | Buscar por email | ✅ | ADMIN |
+| GET | `/api/admin/usuarios/buscar/role/{role}` | Buscar por role | ✅ | ADMIN |
+| GET | `/api/admin/usuarios/buscar/status/{ativo}` | Buscar por status | ✅ | ADMIN |
+| PUT | `/api/admin/usuarios/{id}` | Atualizar usuário | ✅ | ADMIN |
+| PATCH | `/api/admin/usuarios/{id}/desativar` | Desativar usuário | ✅ | ADMIN |
+| PATCH | `/api/admin/usuarios/{id}/ativar` | Ativar usuário | ✅ | ADMIN |
+| PUT | `/api/admin/usuarios/{id}/foto` | 🆕 Atualizar foto por URL | ✅ | ADMIN |
+| POST | `/api/admin/usuarios/{id}/foto/upload` | 🆕 Upload de foto | ✅ | ADMIN |
+| DELETE | `/api/admin/usuarios/{id}/foto` | 🆕 Remover foto | ✅ | ADMIN |
+| GET | `/api/admin/usuarios/estatisticas` | Estatísticas | ✅ | ADMIN |
+
+### 📸 Upload de Imagens (`/api/imagens`)
+
+| Método | Endpoint | Descrição | Auth | Role |
+|--------|----------|-----------|------|------|
+| POST | `/api/imagens/upload` | 🆕 Upload de uma imagem | ✅ | USER/ADMIN |
+| POST | `/api/imagens/upload/multiple` | 🆕 Upload de múltiplas imagens (máx. 10) | ✅ | USER/ADMIN |
 
 ### 📦 Produtos (`/api/produtos`)
 
@@ -1255,19 +1211,33 @@ mvn test -Dtest=PasswordTest
 | `ORACLE_PASSWORD` | Senha do banco Oracle | `***` |
 | `JWT_SECRET` | Chave secreta JWT (mín 32 chars) | `***` (gerar com openssl) |
 | `JWT_EXPIRATION` | Expiração do token em ms | `86400000` (24h) |
+| `STORAGE_BUCKET` | 🆕 Nome do bucket R2 | `luigarah-prod` |
+| `STORAGE_PUBLIC_BASE_URL` | 🆕 URL pública do R2 | `https://[ACCOUNT_ID].r2.cloudflarestorage.com/luigarah-prod` |
+| `R2_ACCOUNT_ID` | 🆕 Account ID do Cloudflare | `***` |
+| `AWS_ACCESS_KEY_ID` | 🆕 Access key do R2 | `***` |
+| `AWS_SECRET_ACCESS_KEY` | 🆕 Secret key do R2 | `***` |
 | `PORT` | Porta da aplicação | `8080` (auto) |
 
-**2. Como gerar JWT_SECRET segura:**
+**2. Como obter credenciais do Cloudflare R2:**
+
+1. Acesse o Cloudflare Dashboard
+2. Vá em **R2 Object Storage**
+3. Crie um bucket (ex: `luigarah-prod`)
+4. Em **Manage R2 API Tokens**, crie um token
+5. Copie o **Access Key ID** e **Secret Access Key**
+6. O **Account ID** está na URL do dashboard
+
+**3. Como gerar JWT_SECRET segura:**
 ```bash
 openssl rand -base64 64
 ```
 
-**3. Build Command:**
+**4. Build Command:**
 ```bash
 mvn clean package -DskipTests
 ```
 
-**4. Start Command:**
+**5. Start Command:**
 ```bash
 java -Dserver.port=$PORT -Dspring.profiles.active=prod -jar target/luigarah-backend-1.0.0.jar
 ```
@@ -1314,6 +1284,9 @@ docker run -p 8080:8080 \
 | `README_AUTH.md` | Documentação detalhada do sistema de autenticação |
 | `ESTRUTURA_PASTAS.md` | Organização completa do projeto por módulos |
 | `CONFIGURACAO_RENDER_AUTH.md` | Guia de configuração de variáveis no Render |
+| `UPLOAD_IMAGES_GUIDE.md` | 🆕 **Guia completo de upload de imagens** |
+| `SETUP_LOCAL.md` | Guia de configuração local |
+| `ORACLE_ACL_FIX.md` | Correção de ACL Oracle |
 | `GUIA_ALTERAR_SENHA_SWAGGER.md` | Tutorial de alteração de senha via Swagger |
 | `COMO_ALTERAR_SENHA.md` | Instruções de alteração de senha |
 | `ENDPOINTS_PUBLICOS_CORRIGIDO.md` | Configuração de endpoints públicos |
@@ -1442,9 +1415,10 @@ Este projeto está sob a licença **MIT**. Veja o arquivo [LICENSE](LICENSE) par
 - ✅ **Fase 3:** Carrinho e lista de desejos - **Completo**
 - ✅ **Fase 4:** Deploy em produção - **Completo**
 - ✅ **Fase 5:** Administração de usuários com LGPD - **Completo**
-- 🚧 **Fase 6:** Sistema de pedidos - **Em desenvolvimento**
-- 📋 **Fase 7:** Pagamentos e checkout - **Planejado**
-- 📋 **Fase 8:** Painel administrativo avançado - **Planejado**
+- ✅ **Fase 6:** Upload de imagens com Cloudflare R2 - **Completo**
+- 🚧 **Fase 7:** Sistema de pedidos - **Em desenvolvimento**
+- 📋 **Fase 8:** Pagamentos e checkout - **Planejado**
+- 📋 **Fase 9:** Painel administrativo avançado - **Planejado**
 
 ---
 
@@ -1452,9 +1426,11 @@ Este projeto está sob a licença **MIT**. Veja o arquivo [LICENSE](LICENSE) par
 
 - **Spring Boot** - Framework incrível para Java
 - **Oracle Cloud** - Banco de dados gratuito e confiável
+- **Cloudflare R2** - Storage em nuvem sem custo de egress
 - **Render** - Plataforma de deploy simples e eficiente
 - **Swagger** - Documentação automática de APIs
 - **Lombok** - Redução de boilerplate
+- **AWS SDK** - Cliente S3 robusto e confiável
 
 ---
 
@@ -1462,10 +1438,14 @@ Este projeto está sob a licença **MIT**. Veja o arquivo [LICENSE](LICENSE) par
 
 **Desenvolvido com ❤️ pela Equipe Luigarah**
 
-**Luigarah - Sistema Seguro, Modular e Escalável**
+**🛍️ Luigarah - E-commerce Completo e Moderno**
+
+**Sistema Seguro, Modular, Escalável e em Nuvem**
+
+**☁️ Cloudflare R2 | 🗄️ Oracle ADB | 🚀 Render | 🔐 JWT + OAuth2**
 
 **Conformidade total com LGPD**
 
-📅 **Última atualização:** 15 de Outubro de 2025
+📅 **Última atualização:** 16 de Outubro de 2025
 
 </div>

@@ -272,4 +272,38 @@ public class UsuarioAdminService {
     public long contarPorRole(Role role) {
         return usuarioRepository.countByRole(role);
     }
+
+    /**
+     * Atualiza foto de perfil de um usuário (ADMIN)
+     */
+    @Transactional
+    public UsuarioAdminDTO atualizarFotoPerfil(Long id, String fotoUrl) {
+        log.info("Atualizando foto de perfil do usuário ID: {}", id);
+
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado com ID: " + id));
+
+        usuario.setFotoPerfil(fotoUrl);
+        usuario = usuarioRepository.save(usuario);
+
+        log.info("Foto de perfil atualizada com sucesso para o usuário ID: {}", id);
+
+        return usuarioMapper.toAdminDTO(usuario);
+    }
+
+    /**
+     * Remove foto de perfil de um usuário (ADMIN)
+     */
+    @Transactional
+    public void removerFotoPerfil(Long id) {
+        log.info("Removendo foto de perfil do usuário ID: {}", id);
+
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado com ID: " + id));
+
+        usuario.setFotoPerfil(null);
+        usuarioRepository.save(usuario);
+
+        log.info("Foto de perfil removida com sucesso do usuário ID: {}", id);
+    }
 }

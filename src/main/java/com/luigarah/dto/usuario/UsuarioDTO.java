@@ -37,8 +37,8 @@ public class UsuarioDTO {
     @Schema(description = "Gênero do usuário", example = "Masculino", maxLength = 20)
     private String genero;
 
-    @Schema(description = "URL da foto do perfil", example = "https://...", maxLength = 500)
-    private String fotoUrl;
+    @Schema(description = "URL da foto de perfil", example = "https://lh3.googleusercontent.com/a/...", maxLength = 500)
+    private String fotoPerfil;
 
     @Schema(description = "Papel do usuário no sistema", example = "USER")
     private Role role;

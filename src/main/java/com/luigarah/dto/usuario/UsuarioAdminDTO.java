@@ -40,7 +40,7 @@ public class UsuarioAdminDTO {
     private String genero;
 
     @Schema(description = "URL da foto de perfil", example = "https://lh3.googleusercontent.com/a/...")
-    private String fotoUrl;
+    private String fotoPerfil;
 
     @Schema(description = "Papel do usuário no sistema", example = "USER")
     private String role;
