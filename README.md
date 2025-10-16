@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Production](https://img.shields.io/badge/production-Render-blue.svg)](https://luigarah-backend.onrender.com)
 
-> Sistema backend completo para e-commerce de moda com autenticação JWT, gerenciamento de produtos, carrinho de compras, lista de desejos e **upload de imagens em nuvem**.
+> Sistema backend completo para e-commerce de moda com autenticação JWT, gerenciamento de produtos, carrinho de compras, lista de desejos e **upload de imagens em nuvem com Cloudflare R2**.
 
 **🌐 Produção:** https://luigarah-backend.onrender.com  
 **📚 Documentação API:** https://luigarah-backend.onrender.com/swagger-ui/index.html  
@@ -236,7 +236,7 @@ O projeto segue rigorosamente os princípios de **Clean Architecture** e **Domai
 | **AWS SDK Core** | 2.20+ | Core do SDK AWS |
 | **Spring Multipart** | 3.2.0 | Upload de arquivos via HTTP |
 
-> **Cloudflare R2** é compatível com a API S3 da AWS, permitindo usar o AWS SDK sem modificações.
+> **⚠️ IMPORTANTE:** O Cloudflare R2 é 100% compatível com a API S3 da AWS. A região deve ser configurada como **"auto"**
 
 ### 📚 Documentação
 
@@ -886,7 +886,7 @@ controller/{modulo}/  → service/{modulo}/  → repository/{modulo}/
 - `S3ImageStorageService.java` - **Implementação para produção**
   - Ativo em todos os perfis exceto `local`
   - Upload para Cloudflare R2 (S3-compatible)
-  - URLs públicas do bucket R2
+  - URLs públicas configuráveis via `STORAGE_PUBLIC_BASE_URL`
 
 **DTOs:**
 - `ImageUploadResponse.java` - Resposta de upload com URL, metadata
@@ -895,7 +895,7 @@ controller/{modulo}/  → service/{modulo}/  → repository/{modulo}/
 - `LocalStorageConfig.java` - Configura pasta de uploads locais
 - `WebMvcConfig.java` - Mapeia `/uploads/` para recursos estáticos
 
-#### 🔑 Funcionamento
+#### 🔑 Configuração por Ambiente
 
 **Desenvolvimento (perfil local):**
 ```properties
@@ -906,27 +906,53 @@ storage.local.baseUrl=http://localhost:8080/uploads
 
 **Produção (Cloudflare R2):**
 ```properties
-# application-prod.properties
-storage.bucket=luigarah-prod
-storage.publicBaseUrl=https://[ACCOUNT_ID].r2.cloudflarestorage.com/luigarah-prod
-aws.region=auto-r2
-aws.s3.endpoint=https://[ACCOUNT_ID].r2.cloudflarestorage.com
-aws.credentials.accessKey=${AWS_ACCESS_KEY_ID}
-aws.credentials.secretKey=${AWS_SECRET_ACCESS_KEY}
+# application.properties (base)
+storage.bucket=${STORAGE_BUCKET:luigarah-prod}
+storage.publicBaseUrl=${STORAGE_PUBLIC_BASE_URL:}
+aws.region=auto
+aws.s3.endpoint=${AWS_S3_ENDPOINT:}
+aws.credentials.accessKey=${AWS_ACCESS_KEY_ID:}
+aws.credentials.secretKey=${AWS_SECRET_ACCESS_KEY:}
 ```
 
-#### 🔄 Funcionamento
+**Variáveis de Ambiente no Render:**
+```bash
+# Cloudflare R2 - Credenciais
+AWS_ACCESS_KEY_ID=.....
+AWS_SECRET_ACCESS_KEY=.....
+
+# Cloudflare R2 - Configuração
+R2_ACCOUNT_ID=....
+STORAGE_BUCKET=....
+
+# Endpoint PRIVADO (para upload via SDK)
+AWS_S3_ENDPOINT=....
+
+# Domínio PÚBLICO (para download/visualização)
+STORAGE_PUBLIC_BASE_URL=....
+```
+
+> **📖 Guia Completo:** Consulte [CONFIGURACAO_RENDER_R2.md](./CONFIGURACAO_RENDER_R2.md) para instruções detalhadas de configuração do Cloudflare R2.
+
+#### 🔄 Fluxo de Upload
 
 **Upload de Imagem:**
 ```
-1. Cliente → POST /api/imagens/upload
-2. Backend valida arquivo (tipo, tamanho)
+1. Cliente → POST /api/imagens/upload (multipart/form-data)
+2. Backend valida arquivo (tipo MIME, tamanho)
 3. Backend gera key única: "produtos/1705234567890-produto.jpg"
-4. Backend faz upload para R2 via AWS SDK
-5. Backend retorna URL pública: 
-   "https://[ACCOUNT_ID].r2.cloudflarestorage.com/luigarah-prod/produtos/1705234567890-produto.jpg"
-6. Frontend usa URL para exibir imagem
+4. Backend faz upload para R2 via AWS S3 SDK
+5. Backend monta URL pública: publicBaseUrl + "/" + key
+6. Backend retorna: "https://pub-xxxxx.r2.dev/produtos/1705234567890-produto.jpg"
+7. Frontend usa URL para exibir imagem
 ```
+
+**Diferença entre Endpoints:**
+
+| Tipo | Uso | Requer Auth | Exemplo |
+|------|-----|-------------|---------|
+| **Endpoint Privado** | Upload via SDK | Sim (accessKey) | `https://[ACCOUNT_ID].r2.cloudflarestorage.com` |
+| **Domínio Público** | Download/visualização | Não | `https://pub-xxxxx.r2.dev` |
 
 #### 📦 Estrutura de Pastas no R2
 
@@ -937,16 +963,14 @@ luigara-prod/                    # Bucket
 │   ├── 1705234568901-produto2.png
 │   └── ...
 ├── usuarios/                     # Fotos de perfil
-│   ├── 1705234569012-user1.jpg
-│   ├── 1705234570123-user2.png
+│   ├── 1705234569012-admin-luigarah-com.jpg
+│   ├── 1705234570123-user-email-com.png
 │   └── ...
 └── outros/                       # Outras imagens
     └── ...
 ```
 
-### 🔐 AWS SDK para Java v2
-
-O projeto utiliza o **AWS SDK for Java v2** para comunicação com Cloudflare R2:
+#### 🔐 AWS SDK para Java v2
 
 **Dependências no pom.xml:**
 ```xml
@@ -960,8 +984,8 @@ O projeto utiliza o **AWS SDK for Java v2** para comunicação com Cloudflare R2
 **Configuração do Cliente S3:**
 ```java
 S3Client s3 = S3Client.builder()
-    .region(Region.of("auto"))  // Cloudflare R2 usa "auto"
-    .endpointOverride(URI.create("https://[ACCOUNT_ID].r2.cloudflarestorage.com"))
+    .region(Region.of("auto"))  // DEVE SER "auto"
+    .endpointOverride(URI.create(endpoint))
     .credentialsProvider(StaticCredentialsProvider.create(
         AwsBasicCredentials.create(accessKey, secretKey)
     ))
@@ -971,31 +995,56 @@ S3Client s3 = S3Client.builder()
     .build();
 ```
 
-**⚠️ Importante:**
-- A região deve ser **"auto"** (não "auto-r2")
-- O Cloudflare R2 é 100% compatível com a API S3 da AWS
-- `pathStyleAccessEnabled` deve ser `true` para funcionar com R2
+**⚠️ Pontos Críticos:**
+- ✅ Região: **"auto"** 
+- ✅ `pathStyleAccessEnabled`: **true** (obrigatório para R2)
+- ✅ Endpoint: URL completa com `https://`
+- ✅ Domínio público: Configurar no painel R2 → Settings → Public Access
 
-### 📊 Limites e Recomendações
+#### 📊 Limites e Validações
 
 **Limites Configurados:**
 - ✅ Tamanho máximo por arquivo: **5MB**
 - ✅ Upload múltiplo: **10 arquivos** simultaneamente
-- ✅ Tamanho máximo da requisição: **10MB**
+- ✅ Tamanho máximo da requisição: **5MB**
 
 **Formatos Aceitos:**
-- ✅ JPG/JPEG
-- ✅ PNG
-- ✅ WEBP
-- ✅ GIF
+- ✅ `image/jpeg` ou `image/jpg`
+- ✅ `image/png`
+- ✅ `image/webp`
+- ✅ `image/gif`
 
-**Boas Práticas:**
-- ✅ Sempre validar tipo MIME no backend
-- ✅ Gerar nomes únicos (timestamp + sanitização)
-- ✅ Organizar em pastas lógicas (produtos/, usuarios/, outros/)
-- ✅ Configurar CORS no R2 para acesso direto do frontend
-- ✅ Considerar CDN para cache (Cloudflare CDN integrado)
-- ✅ Usar domínio público personalizado para URLs amigáveis
+**Validações Implementadas:**
+```java
+// Validação de tipo MIME
+if (!imageStorageService.isValidImageType(file.getContentType())) {
+    return ResponseEntity.badRequest().body("Tipo de arquivo inválido");
+}
+
+// Validação de tamanho
+if (file.getSize() > 5 * 1024 * 1024) {
+    return ResponseEntity.badRequest().body("Arquivo muito grande (máx 5MB)");
+}
+```
+
+#### 🔒 Segurança e Boas Práticas
+
+**Implementado:**
+- ✅ Validação de tipo MIME no backend (não confiar no frontend)
+- ✅ Limite de tamanho rigoroso (5MB)
+- ✅ Sanitização de nomes de arquivo (remove caracteres especiais)
+- ✅ Geração de nomes únicos (timestamp + nome sanitizado)
+- ✅ Organização em pastas lógicas (produtos/, usuarios/, outros/)
+- ✅ Credenciais via variáveis de ambiente (nunca no código)
+- ✅ Autenticação JWT obrigatória para upload
+- ✅ Cache headers para CDN (`max-age=31536000, immutable`)
+
+**Recomendado:**
+- 🔄 Configurar CORS no R2 para acesso direto do frontend
+- 🔄 Usar domínio personalizado (ex: `cdn.luigarah.com`)
+- 🔄 Habilitar Cloudflare CDN para cache global
+- 🔄 Implementar compressão de imagens antes do upload
+- 🔄 Adicionar validação de dimensões (largura/altura)
 
 **Configuração CORS no Cloudflare R2:**
 ```json
@@ -1008,4 +1057,224 @@ S3Client s3 = S3Client.builder()
   }
 ]
 ```
-````
+
+---
+
+## 📸 Sistema de Upload de Imagens
+
+O sistema de upload de imagens foi projetado para ser **flexível e escalável**, funcionando localmente em desenvolvimento e em nuvem (Cloudflare R2) em produção.
+
+### 🏗️ Arquitetura
+
+```
+┌─────────────────────────────────────────────────┐
+│         Frontend (React/Next.js)                │
+│   - Seleciona arquivo                           │
+│   - Envia via multipart/form-data               │
+└──────────────────┬──────────────────────────────┘
+                   │ POST /api/imagens/upload
+                   ↓
+┌─────────────────────────────────────────────────┐
+│         ImageUploadController                   │
+│   - Valida tipo MIME                            │
+│   - Valida tamanho                              │
+│   - Chama ImageStorageService                   │
+└──────────────────┬──────────────────────────────┘
+                   │
+        ┌──────────┴───────────┐
+        ↓                      ↓
+┌──────────────────┐  ┌────────────────────┐
+│ LocalImageStorage│  │ S3ImageStorage     │
+│ (perfil: local)  │  │ (perfil: prod)     │
+│ - Salva em disco │  │ - Upload para R2   │
+│ - URL: /uploads/ │  │ - URL: pub-xxx.dev │
+└──────────────────┘  └────────────────────┘
+```
+
+### 🔄 Estratégia de Profiles
+
+O projeto usa **Spring Profiles** para alternar automaticamente entre storage local e cloud:
+
+```java
+@Service
+@Profile("local")  // Ativo APENAS em desenvolvimento
+public class LocalImageStorageService implements ImageStorageService {
+    // Salva em src/main/resources/uploads/
+}
+
+@Service
+@Profile("!local")  // Ativo em todos os ambientes EXCETO local
+public class S3ImageStorageService implements ImageStorageService {
+    // Salva em Cloudflare R2 via AWS SDK
+}
+```
+
+### 📝 Endpoints de Upload
+
+#### 1. Upload de Uma Imagem
+```http
+POST /api/imagens/upload
+Content-Type: multipart/form-data
+Authorization: Bearer <token>
+
+file: [arquivo.jpg]
+folder: "produtos"  (opcional, padrão: "outros")
+```
+
+**Resposta (sucesso):**
+```json
+{
+  "url": "https://pub-xxxxx.r2.dev/produtos/1705234567890-arquivo.jpg",
+  "key": "produtos/1705234567890-arquivo.jpg",
+  "size": 152340,
+  "contentType": "image/jpeg",
+  "folder": "produtos"
+}
+```
+
+#### 2. Upload Múltiplo
+```http
+POST /api/imagens/upload/multiple
+Content-Type: multipart/form-data
+Authorization: Bearer <token>
+
+files: [arquivo1.jpg, arquivo2.png, ...]  (máx 10)
+folder: "produtos"  (opcional)
+```
+
+**Resposta (sucesso):**
+```json
+{
+  "sucesso": true,
+  "mensagem": "3 imagens enviadas com sucesso",
+  "urls": [
+    "https://pub-xxxxx.r2.dev/produtos/1705234567890-arquivo1.jpg",
+    "https://pub-xxxxx.r2.dev/produtos/1705234568901-arquivo2.png",
+    "https://pub-xxxxx.r2.dev/produtos/1705234569012-arquivo3.webp"
+  ]
+}
+```
+
+### 🔧 Configuração Passo a Passo
+
+#### 1. Habilitar Acesso Público no Cloudflare R2
+
+1. Acesse https://dash.cloudflare.com/
+2. Vá em **R2** → **luigarah-prod**
+3. Clique em **Settings** → **Public Access**
+4. Clique em **Allow Access**
+5. **Copie o domínio público** gerado (ex: `https://pub-xxxxx.r2.dev`)
+
+#### 2. Configurar Variáveis no Render
+
+No painel do Render, adicione as seguintes variáveis:
+
+```bash
+# Credenciais (obtidas em R2 → Manage R2 API Tokens)
+AWS_ACCESS_KEY_ID=d563b6dedff6e5f54b470660cae83d70
+AWS_SECRET_ACCESS_KEY=3769ef6b1ff9bf585562845cf8c415a57581730836639341d8c536c6d793bb0f
+
+# Configuração do Bucket
+R2_ACCOUNT_ID=aef01bde77cd4e5689cde7c9784a36ee
+STORAGE_BUCKET=luigarah-prod
+
+# Endpoint PRIVADO (para upload)
+AWS_S3_ENDPOINT=https://aef01bde77cd4e5689cde7c9784a36ee.r2.cloudflarestorage.com
+
+# ⚠️ CRÍTICO: Domínio PÚBLICO (para download)
+STORAGE_PUBLIC_BASE_URL=https://pub-0307a72d067843b4bb500a3fd7669eca.r2.dev
+```
+
+> **⚠️ ATENÇÃO:** O `STORAGE_PUBLIC_BASE_URL` deve ser o domínio público gerado no passo 1, **SEM** o nome do bucket no final.
+
+#### 3. Verificar Configuração
+
+**application.properties:**
+```properties
+# Base (usado em todos os ambientes)
+storage.bucket=${STORAGE_BUCKET:luigarah-prod}
+storage.publicBaseUrl=${STORAGE_PUBLIC_BASE_URL:}
+aws.region=auto
+aws.s3.endpoint=${AWS_S3_ENDPOINT:}
+aws.credentials.accessKey=${AWS_ACCESS_KEY_ID:}
+aws.credentials.secretKey=${AWS_SECRET_ACCESS_KEY:}
+```
+
+**application-prod.properties:**
+```properties
+# Apenas configurações de banco Oracle (sem redundância de storage)
+spring.datasource.driver-class-name=oracle.jdbc.OracleDriver
+spring.datasource.url=jdbc:oracle:thin:@luigarah_tp
+spring.datasource.username=${ORACLE_USERNAME}
+spring.datasource.password=${ORACLE_PASSWORD}
+```
+
+### 🧪 Testando o Sistema
+
+#### Teste Local (Desenvolvimento)
+
+```bash
+# 1. Iniciar aplicação com perfil local
+mvn spring-boot:run -Dspring-boot.run.profiles=local
+
+# 2. Fazer upload
+curl -X POST http://localhost:8080/api/imagens/upload \
+  -H "Authorization: Bearer <token>" \
+  -F "file=@imagem.jpg" \
+  -F "folder=produtos"
+
+# 3. Verificar arquivo salvo
+ls src/main/resources/uploads/produtos/
+
+# 4. Acessar imagem no navegador
+http://localhost:8080/uploads/produtos/1705234567890-imagem.jpg
+```
+
+#### Teste em Produção (Render + R2)
+
+```bash
+# 1. Fazer upload
+curl -X POST https://luigarah-backend.onrender.com/api/imagens/upload \
+  -H "Authorization: Bearer <token>" \
+  -F "file=@imagem.jpg" \
+  -F "folder=produtos"
+
+# 2. Resposta esperada
+{
+  "url": "https://pub-xxxxx.r2.dev/produtos/1705234567890-imagem.jpg"
+}
+
+# 3. Acessar URL no navegador
+https://pub-xxxxx.r2.dev/produtos/1705234567890-imagem.jpg
+```
+
+### 📊 Logs Esperados
+
+**Sucesso:**
+```
+✅ S3ImageStorageService inicializado.
+   endpoint=https://aef01bde77cd4e5689cde7c9784a36ee.r2.cloudflarestorage.com
+   bucket=luigarah-prod
+   publicBaseUrl=https://pub-0307a72d067843b4bb500a3fd7669eca.r2.dev
+
+📤 Upload recebido: imagem.jpg (152340 bytes) → pasta: produtos
+✅ Upload OK para key='produtos/1705234567890-imagem.jpg'
+   → https://pub-0307a72d067843b4bb500a3fd7669eca.r2.dev/produtos/1705234567890-imagem.jpg
+```
+
+**Erro (configuração incorreta):**
+```
+❌ Falha no upload para key='produtos/xxx.jpg' no bucket 'luigarah-prod':
+   The region name 'auto-r2' is not valid. Must be one of: auto
+```
+→ **Solução:** Alterar `aws.region=auto` (remover `-r2`)
+
+### 🔍 Troubleshooting
+
+| Erro | Causa | Solução |
+|------|-------|---------|
+| `The region name 'auto-r2' is not valid` | Região incorreta | Usar `aws.region=auto` |
+| `<Error><Code>InvalidArgument</Code><Message>Authorization</Message>` | Tentando acessar endpoint privado | Configurar `STORAGE_PUBLIC_BASE_URL` |
+| `Credenciais inválidas` | Access Key/Secret errados | Verificar tokens no painel R2 |
+| `Bucket não encontrado` | Nome do bucket errado | Confirmar `STORAGE_BUCKET=luigarah-prod` |
+| Imagem não carrega no frontend | URL pública incorreta | Habilitar acesso público no R2 |
