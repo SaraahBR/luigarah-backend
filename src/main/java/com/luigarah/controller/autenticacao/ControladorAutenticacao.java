@@ -8,6 +8,7 @@ import com.luigarah.dto.autenticacao.RegistroRequestDTO;
 import com.luigarah.dto.usuario.AtualizarPerfilRequest;
 import com.luigarah.dto.usuario.UsuarioDTO;
 import com.luigarah.service.autenticacao.AuthService;
+import com.luigarah.service.storage.ImageStorageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -35,6 +36,7 @@ import java.util.Map;
 public class ControladorAutenticacao {
 
     private final AuthService authService;
+    private final ImageStorageService imageStorageService;
 
     /**
      * Login com email e senha
@@ -280,7 +282,7 @@ public class ControladorAutenticacao {
                     {
                       "sucesso": true,
                       "mensagem": "Foto enviada com sucesso",
-                      "fotoUrl": "http://localhost:8080/uploads/usuarios/user123.jpg"
+                      "fotoPerfil": "https://pub-xxxxx.r2.dev/usuarios/admin-luigarah-com.jpg"
                     }
                     """
                 )
@@ -303,9 +305,9 @@ public class ControladorAutenticacao {
             }
 
             String contentType = file.getContentType();
-            if (contentType == null || !contentType.startsWith("image/")) {
+            if (!imageStorageService.isValidImageType(contentType)) {
                 return ResponseEntity.badRequest().body(
-                    Map.of("sucesso", false, "mensagem", "Arquivo deve ser uma imagem")
+                    Map.of("sucesso", false, "mensagem", "Tipo de arquivo inválido. Use: JPG, PNG, WEBP ou GIF")
                 );
             }
 
@@ -316,15 +318,23 @@ public class ControladorAutenticacao {
                 );
             }
 
-            System.out.println("📤 Upload de foto de perfil - Usuário: " + userDetails.getUsername());
-            System.out.println("📦 Arquivo: " + file.getOriginalFilename() + " (" + file.getSize() + " bytes)");
+            log.info("📤 Upload de foto de perfil - Usuário: {}", userDetails.getUsername());
+            log.info("📦 Arquivo: {} ({} bytes)", file.getOriginalFilename(), file.getSize());
 
-            // TODO: Implementar storage service (AWS S3, Azure Blob, etc)
-            // String fotoUrl = storageService.salvarFoto(file, userDetails.getUsername());
+            // ✅ UPLOAD REAL PARA CLOUDFLARE R2
+            String key = imageStorageService.generateKey("usuarios",
+                userDetails.getUsername().replace("@", "-").replace(".", "-") + ".jpg");
 
-            // Por enquanto, retornar URL mockada
-            String fotoUrl = "https://storage.luigarah.com/fotos/" + userDetails.getUsername() + ".jpg";
+            String fotoUrl = imageStorageService.save(
+                key,
+                contentType,
+                file.getSize(),
+                file.getInputStream()
+            );
 
+            log.info("✅ Foto salva no storage: {}", fotoUrl);
+
+            // Atualiza no banco de dados
             UsuarioDTO usuario = authService.atualizarFotoPerfil(fotoUrl, userDetails.getUsername());
 
             return ResponseEntity.ok(
@@ -336,8 +346,7 @@ public class ControladorAutenticacao {
             );
 
         } catch (Exception e) {
-            System.err.println("❌ Erro ao fazer upload: " + e.getMessage());
-            log.error("Erro ao fazer upload de foto de perfil", e);
+            log.error("❌ Erro ao fazer upload: {}", e.getMessage(), e);
             return ResponseEntity.status(500).body(
                 Map.of("sucesso", false, "mensagem", "Erro ao fazer upload: " + e.getMessage())
             );
