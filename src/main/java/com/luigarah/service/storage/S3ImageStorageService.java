@@ -40,45 +40,67 @@ public class S3ImageStorageService implements ImageStorageService {
     @Value("${aws.region:auto}")
     private String region;
 
-    @Value("${aws.s3.endpoint}")
+    @Value("${aws.s3.endpoint:}")
     private String endpoint;
 
-    @Value("${aws.credentials.accessKey}")
+    @Value("${aws.credentials.accessKey:}")
     private String accessKey;
 
-    @Value("${aws.credentials.secretKey}")
+    @Value("${aws.credentials.secretKey:}")
     private String secretKey;
 
     private S3Client s3;
 
     @PostConstruct
     void init() {
+        log.info("🔧 Inicializando S3ImageStorageService...");
+        log.debug("   storage.bucket={}", bucket);
+        log.debug("   storage.publicBaseUrl={}", publicBaseUrl);
+        log.debug("   aws.region={}", region);
+        log.debug("   aws.s3.endpoint={}", endpoint);
+        log.debug("   aws.credentials.accessKey={}", accessKey != null && !accessKey.isEmpty() ? "***configurado***" : "VAZIO");
+        log.debug("   aws.credentials.secretKey={}", secretKey != null && !secretKey.isEmpty() ? "***configurado***" : "VAZIO");
+
         // Validações mínimas para falhar rápido se ambiente estiver incorreto
         if (isBlank(bucket)) {
-            throw new IllegalStateException("storage.bucket não configurado");
+            log.error("❌ storage.bucket não configurado!");
+            throw new IllegalStateException("storage.bucket não configurado. Configure a variável STORAGE_BUCKET");
         }
         if (isBlank(endpoint)) {
-            throw new IllegalStateException("aws.s3.endpoint não configurado");
+            log.error("❌ aws.s3.endpoint não configurado!");
+            throw new IllegalStateException("aws.s3.endpoint não configurado. Configure a variável AWS_S3_ENDPOINT");
         }
-        if (isBlank(accessKey) || isBlank(secretKey)) {
-            throw new IllegalStateException("Credenciais AWS/R2 não configuradas (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY)");
+        if (isBlank(accessKey)) {
+            log.error("❌ aws.credentials.accessKey não configurado!");
+            throw new IllegalStateException("AWS_ACCESS_KEY_ID não configurado");
+        }
+        if (isBlank(secretKey)) {
+            log.error("❌ aws.credentials.secretKey não configurado!");
+            throw new IllegalStateException("AWS_SECRET_ACCESS_KEY não configurado");
         }
 
-        var s3cfg = S3Configuration.builder()
-                .pathStyleAccessEnabled(true) // Obrigatório para Cloudflare R2
-                .build();
+        try {
+            var s3cfg = S3Configuration.builder()
+                    .pathStyleAccessEnabled(true) // Obrigatório para Cloudflare R2
+                    .build();
 
-        this.s3 = S3Client.builder()
-                .region(Region.of(region)) // Rótulo simbólico; R2 ignora região real
-                .serviceConfiguration(s3cfg)
-                .endpointOverride(URI.create(endpoint))
-                .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(accessKey, secretKey)
-                ))
-                .build();
+            this.s3 = S3Client.builder()
+                    .region(Region.of(region)) // Rótulo simbólico; R2 ignora região real
+                    .serviceConfiguration(s3cfg)
+                    .endpointOverride(URI.create(endpoint))
+                    .credentialsProvider(StaticCredentialsProvider.create(
+                            AwsBasicCredentials.create(accessKey, secretKey)
+                    ))
+                    .build();
 
-        log.info("✅ S3ImageStorageService inicializado. endpoint={}, bucket={}, publicBaseUrl={}",
-                endpoint, bucket, (publicBaseUrl == null ? "" : publicBaseUrl));
+            log.info("✅ S3ImageStorageService inicializado com sucesso!");
+            log.info("   endpoint={}", endpoint);
+            log.info("   bucket={}", bucket);
+            log.info("   publicBaseUrl={}", isBlank(publicBaseUrl) ? "(não configurado, usando fallback)" : publicBaseUrl);
+        } catch (Exception e) {
+            log.error("❌ Erro ao inicializar S3Client: {}", e.getMessage(), e);
+            throw new IllegalStateException("Falha ao inicializar S3ImageStorageService: " + e.getMessage(), e);
+        }
     }
 
     @Override

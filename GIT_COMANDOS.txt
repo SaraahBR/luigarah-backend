@@ -1,0 +1,101 @@
+# 🚀 COMANDOS PARA EXECUTAR NO GIT BASH
+
+## Execute os comandos abaixo na ordem:
+
+```bash
+git add .
+```
+
+```bash
+git commit -m "fix: corrigir inicializacao S3ImageStorageService e adicionar valores padrao"
+```
+
+```bash
+git push origin main
+```
+
+---
+
+## ⚠️ O que foi corrigido:
+
+1. ✅ S3ImageStorageService agora tem valores padrão vazios para evitar erro se variável não existir
+2. ✅ Logs detalhados para identificar qual variável está faltando
+3. ✅ Tratamento de erro melhor com mensagens claras
+4. ✅ README.md atualizado - TODOS os dados sensíveis removidos e substituídos por placeholders
+
+---
+
+## 🔍 PROBLEMA IDENTIFICADO:
+
+A variável **AWS_S3_ENDPOINT** provavelmente está FALTANDO no Render!
+
+### ✅ Solução: Adicione esta variável no painel do Render
+
+**Nome:** `AWS_S3_ENDPOINT`
+**Valor:** `https://aef01bde77cd4e5689cde7c9784a36ee.r2.cloudflarestorage.com`
+
+---
+
+## 📋 Checklist de Variáveis no Render:
+
+Verifique se TODAS essas variáveis estão configuradas:
+
+- [x] AWS_ACCESS_KEY_ID
+- [x] AWS_SECRET_ACCESS_KEY
+- [x] R2_ACCOUNT_ID
+- [x] STORAGE_BUCKET
+- [ ] **AWS_S3_ENDPOINT** ← ⚠️ ADICIONE ESTA!
+- [x] STORAGE_PUBLIC_BASE_URL
+- [x] ORACLE_USERNAME
+- [x] ORACLE_PASSWORD
+- [x] ORACLE_TNS_ALIAS
+- [x] ORACLE_WALLET_ZIP_B64
+- [x] TNS_ADMIN
+- [x] JWT_SECRET
+- [x] JWT_EXPIRATION
+- [x] SPRING_PROFILES_ACTIVE
+- [x] SERVER_PORT
+
+---
+
+## 🔧 Como Adicionar AWS_S3_ENDPOINT no Render:
+
+1. Acesse o painel do Render
+2. Vá em **Environment** (variáveis de ambiente)
+3. Clique em **Add Environment Variable**
+4. **Key:** `AWS_S3_ENDPOINT`
+5. **Value:** `https://aef01bde77cd4e5689cde7c9784a36ee.r2.cloudflarestorage.com`
+6. Clique em **Save Changes**
+7. Aguarde o deploy automático
+
+---
+
+## 📊 Logs Esperados Depois da Correção:
+
+### ✅ Sucesso:
+```
+🔧 Inicializando S3ImageStorageService...
+   storage.bucket=luigarah-prod
+   storage.publicBaseUrl=https://pub-xxxxx.r2.dev
+   aws.region=auto
+   aws.s3.endpoint=https://aef01bde77cd4e5689cde7c9784a36ee.r2.cloudflarestorage.com
+   aws.credentials.accessKey=***configurado***
+   aws.credentials.secretKey=***configurado***
+✅ S3ImageStorageService inicializado com sucesso!
+```
+
+### ❌ Se ainda estiver faltando:
+```
+❌ aws.s3.endpoint não configurado!
+Configure a variável AWS_S3_ENDPOINT
+```
+
+---
+
+## 🎯 Resumo:
+
+1. Execute os comandos Git acima
+2. Adicione a variável `AWS_S3_ENDPOINT` no Render
+3. Aguarde o deploy
+4. Verifique os logs para confirmar sucesso
+

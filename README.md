@@ -881,7 +881,7 @@ controller/{modulo}/  → service/{modulo}/  → repository/{modulo}/
 - `LocalImageStorageService.java` - **Implementação para desenvolvimento**
   - Ativo apenas no perfil `local`
   - Salva arquivos em `src/main/resources/uploads/`
-  - URLs acessíveis via `http://localhost:8080/uploads/...`
+  - URLs acessíveis via `http://localhost:8080/uploads/`
 
 - `S3ImageStorageService.java` - **Implementação para produção**
   - Ativo em todos os perfis exceto `local`
@@ -1171,18 +1171,18 @@ No painel do Render, adicione as seguintes variáveis:
 
 ```bash
 # Credenciais (obtidas em R2 → Manage R2 API Tokens)
-AWS_ACCESS_KEY_ID=d563b6dedff6e5f54b470660cae83d70
-AWS_SECRET_ACCESS_KEY=3769ef6b1ff9bf585562845cf8c415a57581730836639341d8c536c6d793bb0f
+AWS_ACCESS_KEY_ID=<sua-access-key-aqui>
+AWS_SECRET_ACCESS_KEY=<sua-secret-key-aqui>
 
 # Configuração do Bucket
-R2_ACCOUNT_ID=aef01bde77cd4e5689cde7c9784a36ee
+R2_ACCOUNT_ID=<seu-account-id>
 STORAGE_BUCKET=luigarah-prod
 
 # Endpoint PRIVADO (para upload)
-AWS_S3_ENDPOINT=https://aef01bde77cd4e5689cde7c9784a36ee.r2.cloudflarestorage.com
+AWS_S3_ENDPOINT=https://<seu-account-id>.r2.cloudflarestorage.com
 
 # ⚠️ CRÍTICO: Domínio PÚBLICO (para download)
-STORAGE_PUBLIC_BASE_URL=https://pub-0307a72d067843b4bb500a3fd7669eca.r2.dev
+STORAGE_PUBLIC_BASE_URL=https://pub-xxxxx.r2.dev
 ```
 
 > **⚠️ ATENÇÃO:** O `STORAGE_PUBLIC_BASE_URL` deve ser o domínio público gerado no passo 1, **SEM** o nome do bucket no final.

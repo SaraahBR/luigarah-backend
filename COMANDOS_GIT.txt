@@ -1,0 +1,43 @@
+# 🚀 COMANDOS PARA EXECUTAR NO GIT BASH
+
+## Execute os comandos abaixo na ordem:
+
+# 1. Adicionar todos os arquivos modificados
+git add .
+
+# 2. Fazer commit com mensagem descritiva
+git commit -m "fix: corrigir inicializacao S3ImageStorageService e remover dados sensiveis do README"
+
+# 3. Fazer push para o repositório remoto
+git push origin main
+
+## ⚠️ O que foi corrigido:
+
+1. ✅ S3ImageStorageService agora tem logs detalhados para identificar qual variável está faltando
+2. ✅ Tratamento de erro melhor com mensagens claras
+3. ✅ README.md atualizado - TODOS os dados sensíveis removidos (credenciais, account IDs, etc)
+4. ✅ Substituído por placeholders genéricos
+
+## 📋 Depois do Deploy:
+
+1. Verifique os logs do Render para identificar qual variável está faltando
+2. Configure a variável que estiver faltando no painel do Render
+3. Aguarde novo deploy automático
+4. Verifique se a aplicação iniciou corretamente
+
+## 🔍 Logs que você vai ver:
+
+Se alguma variável estiver faltando, você verá no Render:
+```
+🔧 Inicializando S3ImageStorageService...
+   storage.bucket=luigarah-prod
+   storage.publicBaseUrl=
+   aws.region=auto
+   aws.s3.endpoint=https://xxxxx.r2.cloudflarestorage.com
+   aws.credentials.accessKey=***configurado***
+   aws.credentials.secretKey=VAZIO
+❌ aws.credentials.secretKey não configurado!
+```
+
+Isso vai te mostrar EXATAMENTE qual variável está faltando!
+
