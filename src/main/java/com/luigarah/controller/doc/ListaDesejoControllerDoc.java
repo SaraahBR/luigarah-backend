@@ -18,7 +18,7 @@ import java.util.List;
  * Documentação da API de Lista de Desejos.
  */
 @Tag(name = "Lista de Desejos", description = "Endpoints para gerenciar a lista de desejos/favoritos do usuário")
-@SecurityRequirement(name = "bearerAuth")
+@SecurityRequirement(name = "bearer-key")
 public interface ListaDesejoControllerDoc {
 
     @Operation(
@@ -191,4 +191,3 @@ public interface ListaDesejoControllerDoc {
     })
     ResponseEntity<Long> contarItens();
 }
-
