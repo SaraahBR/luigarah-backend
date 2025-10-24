@@ -32,7 +32,20 @@ public class OAuthSyncRequest {
     @Schema(description = "URL da foto de perfil", example = "https://lh3.googleusercontent.com/a/...")
     private String fotoPerfil;
 
+    @Schema(description = "URL da foto de perfil (alias para fotoPerfil)", example = "https://lh3.googleusercontent.com/a/...")
+    private String fotoUrl;
+
     @Schema(description = "ID do usuário no provedor OAuth", example = "109876543210")
     private String oauthId;
+
+    /**
+     * Getter inteligente que retorna fotoUrl se fotoPerfil estiver vazio
+     */
+    public String getFotoPerfil() {
+        if (fotoPerfil != null && !fotoPerfil.isEmpty()) {
+            return fotoPerfil;
+        }
+        return fotoUrl;
+    }
 }
 

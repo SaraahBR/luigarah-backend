@@ -226,8 +226,14 @@ public class AuthService {
             log.info("Usuário existente encontrado: {}", usuario.getEmail());
 
             // Atualiza foto se fornecida
-            if (request.getFotoPerfil() != null && !request.getFotoPerfil().isEmpty()) {
-                usuario.setFotoPerfil(request.getFotoPerfil());
+            String fotoParaSalvar = request.getFotoPerfil();
+            log.info("📸 Foto recebida do frontend: {}", fotoParaSalvar);
+
+            if (fotoParaSalvar != null && !fotoParaSalvar.isEmpty()) {
+                usuario.setFotoPerfil(fotoParaSalvar);
+                log.info("✅ Foto de perfil atualizada para: {}", fotoParaSalvar);
+            } else {
+                log.warn("⚠️ Nenhuma foto fornecida no request");
             }
 
             // Atualiza provider se estava como LOCAL
@@ -238,10 +244,15 @@ public class AuthService {
                 }
             }
 
+            usuario = usuarioRepository.save(usuario);
+
         } else {
             // E-mail não existe: cria nova conta
             isNewUser = true;
             log.info("Criando novo usuário OAuth: {}", request.getEmail());
+
+            String fotoParaSalvar = request.getFotoPerfil();
+            log.info("📸 Foto recebida do frontend (novo usuário): {}", fotoParaSalvar);
 
             AuthProvider authProvider = mapStringToAuthProvider(request.getProvider());
 
@@ -249,7 +260,7 @@ public class AuthService {
                     .nome(request.getNome())
                     .sobrenome(request.getSobrenome())
                     .email(request.getEmail())
-                    .fotoPerfil(request.getFotoPerfil())
+                    .fotoPerfil(fotoParaSalvar)
                     .role(Role.USER)
                     .ativo(true)
                     .emailVerificado(true) // OAuth já verifica o email
@@ -259,6 +270,7 @@ public class AuthService {
                     .build();
 
             usuario = usuarioRepository.save(usuario);
+            log.info("✅ Novo usuário criado com ID: {} e foto: {}", usuario.getId(), usuario.getFotoPerfil());
         }
 
         // 2. Vincula ou atualiza OAuth provider
