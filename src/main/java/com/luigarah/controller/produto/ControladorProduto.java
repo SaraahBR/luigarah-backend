@@ -506,6 +506,12 @@ public class ControladorProduto implements ProdutoControllerDoc {
             @PathVariable Long id, @Valid @RequestBody ProdutoDTO produtoDTO) {
 
         try {
+            // 🔍 Log do payload recebido
+            System.out.println("🔍 [Controller] PUT /api/produtos/" + id);
+            System.out.println("📥 [Controller] DTO recebido - Destaques: " + produtoDTO.getDestaques());
+            System.out.println("📥 [Controller] DTO recebido - Imagens: " + produtoDTO.getImagens());
+            System.out.println("📥 [Controller] DTO recebido - Titulo: " + produtoDTO.getTitulo());
+
             if (!servicoProduto.produtoExiste(id)) {
                 RespostaProdutoDTO<ProdutoDTO> resposta = RespostaProdutoDTO.erro(
                         "Produto com ID " + id + " não encontrado"
@@ -515,8 +521,15 @@ public class ControladorProduto implements ProdutoControllerDoc {
 
             Produto produto = converterParaEntidade(produtoDTO);
             produto.setId(id);
+
+            System.out.println("🔄 [Controller] Entidade convertida - Destaques: " + produto.getDestaques());
+            System.out.println("🔄 [Controller] Entidade convertida - Imagens: " + produto.getImagens());
+
             Produto produtoAtualizado = servicoProduto.atualizarProduto(id, produto);
             ProdutoDTO produtoAtualizadoDTO = converterParaDTO(produtoAtualizado);
+
+            System.out.println("✅ [Controller] Produto atualizado - Destaques: " + produtoAtualizadoDTO.getDestaques());
+            System.out.println("✅ [Controller] Produto atualizado - Imagens: " + produtoAtualizadoDTO.getImagens());
 
             RespostaProdutoDTO<ProdutoDTO> resposta = RespostaProdutoDTO.sucesso(
                     produtoAtualizadoDTO, "Produto atualizado com sucesso"
@@ -525,6 +538,8 @@ public class ControladorProduto implements ProdutoControllerDoc {
             return ResponseEntity.ok(resposta);
 
         } catch (Exception e) {
+            System.err.println("❌ [Controller] Erro ao atualizar produto: " + e.getMessage());
+            e.printStackTrace();
             RespostaProdutoDTO<ProdutoDTO> resposta = RespostaProdutoDTO.erro(
                     "Erro ao atualizar produto: " + e.getMessage()
             );

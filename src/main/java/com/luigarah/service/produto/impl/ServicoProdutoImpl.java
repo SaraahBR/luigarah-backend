@@ -90,6 +90,14 @@ public class ServicoProdutoImpl implements ServicoProduto {
         Produto p = repositorioProduto.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException("Produto com ID " + id + " não encontrado"));
 
+        // 🔍 Log detalhado para debug
+        System.out.println("🔍 [ServicoProduto] Atualizando produto ID: " + id);
+        System.out.println("🔍 [ServicoProduto] Destaques ANTES da atualização: " + p.getDestaques());
+        System.out.println("🔍 [ServicoProduto] Destaques RECEBIDOS do DTO: " + produtoAtualizado.getDestaques());
+        System.out.println("🔍 [ServicoProduto] Imagens ANTES da atualização: " + p.getImagens());
+        System.out.println("🔍 [ServicoProduto] Imagens RECEBIDAS do DTO: " + produtoAtualizado.getImagens());
+
+        // ✅ Atualização de campos simples
         if (produtoAtualizado.getTitulo() != null)           p.setTitulo(produtoAtualizado.getTitulo());
         if (produtoAtualizado.getSubtitulo() != null)        p.setSubtitulo(produtoAtualizado.getSubtitulo());
         if (produtoAtualizado.getAutor() != null)            p.setAutor(produtoAtualizado.getAutor());
@@ -98,13 +106,36 @@ public class ServicoProdutoImpl implements ServicoProduto {
         if (produtoAtualizado.getDimensao() != null)         p.setDimensao(produtoAtualizado.getDimensao());
         if (produtoAtualizado.getImagem() != null)           p.setImagem(produtoAtualizado.getImagem());
         if (produtoAtualizado.getImagemHover() != null)      p.setImagemHover(produtoAtualizado.getImagemHover());
-        if (produtoAtualizado.getImagens() != null)          p.setImagens(JsonStringCleaner.clean(produtoAtualizado.getImagens()));
+
+        // ✅ ARRAYS: Substituição COMPLETA (não merge)
+        // Imagens: substitui completamente o JSON do array
+        if (produtoAtualizado.getImagens() != null) {
+            String imagensLimpas = JsonStringCleaner.clean(produtoAtualizado.getImagens());
+            System.out.println("✅ [ServicoProduto] Imagens APÓS limpeza: " + imagensLimpas);
+            p.setImagens(imagensLimpas);
+        }
+
+        // Destaques: substitui completamente o JSON do array
+        if (produtoAtualizado.getDestaques() != null) {
+            String destaquesLimpos = JsonStringCleaner.clean(produtoAtualizado.getDestaques());
+            System.out.println("✅ [ServicoProduto] Destaques APÓS limpeza: " + destaquesLimpos);
+            p.setDestaques(destaquesLimpos);
+        }
+
+        // ✅ Outros campos
         if (produtoAtualizado.getComposicao() != null)       p.setComposicao(produtoAtualizado.getComposicao());
-        if (produtoAtualizado.getDestaques() != null)        p.setDestaques(JsonStringCleaner.clean(produtoAtualizado.getDestaques()));
         if (produtoAtualizado.getCategoria() != null)        p.setCategoria(produtoAtualizado.getCategoria());
         if (produtoAtualizado.getModelo() != null)           p.setModelo(JsonStringCleaner.clean(produtoAtualizado.getModelo()));
 
-        return repositorioProduto.save(p);
+        System.out.println("💾 [ServicoProduto] Salvando produto com destaques: " + p.getDestaques());
+        System.out.println("💾 [ServicoProduto] Salvando produto com imagens: " + p.getImagens());
+
+        Produto produtoSalvo = repositorioProduto.save(p);
+
+        System.out.println("✅ [ServicoProduto] Produto salvo com destaques: " + produtoSalvo.getDestaques());
+        System.out.println("✅ [ServicoProduto] Produto salvo com imagens: " + produtoSalvo.getImagens());
+
+        return produtoSalvo;
     }
 
     @Override
