@@ -27,6 +27,9 @@ public class CarrinhoItemDTO {
     @Schema(description = "Quantidade do produto", example = "2")
     private Integer quantidade;
 
+    @Schema(description = "Estoque disponível do produto/tamanho", example = "10", accessMode = Schema.AccessMode.READ_ONLY)
+    private Integer estoqueDisponivel;
+
     @Schema(description = "Data de adição ao carrinho", accessMode = Schema.AccessMode.READ_ONLY)
     private LocalDateTime dataAdicao;
 
