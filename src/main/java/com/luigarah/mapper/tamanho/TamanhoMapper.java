@@ -16,6 +16,7 @@ public class TamanhoMapper {
         }
 
         TamanhoDTO dto = new TamanhoDTO();
+        dto.setId(tamanho.getId());
         dto.setEtiqueta(tamanho.getEtiqueta());
         dto.setCategoria(tamanho.getCategoria());
         // qtdEstoque será preenchido em outro contexto quando necessário
@@ -30,6 +31,7 @@ public class TamanhoMapper {
         }
 
         TamanhoDTO dto = new TamanhoDTO();
+        dto.setId(tamanho.getId());
         dto.setEtiqueta(tamanho.getEtiqueta());
         dto.setCategoria(tamanho.getCategoria());
         dto.setQtdEstoque(qtdEstoque);

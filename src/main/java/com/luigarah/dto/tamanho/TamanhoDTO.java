@@ -4,6 +4,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "DTO de tamanho (com estoque quando aplicável)")
 public class TamanhoDTO {
+    @Schema(description = "ID do tamanho", example = "64")
+    private Long id;
+
     @Schema(example = "42")
     private String etiqueta;
 
@@ -15,11 +18,22 @@ public class TamanhoDTO {
 
     public TamanhoDTO() {}
 
+    public TamanhoDTO(Long id, String etiqueta, String categoria, Integer qtdEstoque) {
+        this.id = id;
+        this.etiqueta = etiqueta;
+        this.categoria = categoria;
+        this.qtdEstoque = qtdEstoque;
+    }
+
+    // Construtor antigo mantido para compatibilidade
     public TamanhoDTO(String etiqueta, String categoria, Integer qtdEstoque) {
         this.etiqueta = etiqueta;
         this.categoria = categoria;
         this.qtdEstoque = qtdEstoque;
     }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
     public String getEtiqueta() { return etiqueta; }
     public void setEtiqueta(String etiqueta) { this.etiqueta = etiqueta; }
