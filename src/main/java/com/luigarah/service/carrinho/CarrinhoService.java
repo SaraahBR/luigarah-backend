@@ -218,27 +218,24 @@ public class CarrinhoService {
                     .orElse(null);
 
             if (itemExistenteComNovoTamanho != null) {
-                // Já existe item com esse tamanho - somar quantidades
-                int quantidadeTotal = itemExistenteComNovoTamanho.getQuantidade() + dto.getQuantidade();
+                // Já existe item com esse tamanho - NÃO PERMITIR alteração
+                throw new RegraDeNegocioException(
+                    "Você já possui este produto no carrinho com o tamanho " + novoTamanho.getEtiqueta() +
+                    ". Para adicionar mais unidades, ajuste a quantidade do item existente."
+                );
+            }
+        }
 
-                if (quantidadeTotal > estoqueDisponivel) {
-                    throw new RegraDeNegocioException(
-                        "Estoque insuficiente. Disponível: " + estoqueDisponivel +
-                        ", já no carrinho: " + itemExistenteComNovoTamanho.getQuantidade() +
-                        ", tentando adicionar: " + dto.getQuantidade()
-                    );
-                }
+        // Se for bolsa e estiver tentando mudar para um tamanho null quando já existe
+        if (categoria.equalsIgnoreCase("bolsas") && novoTamanho == null && item.getTamanho() != null) {
+            CarrinhoItem itemExistenteSemTamanho = carrinhoItemRepository
+                    .findByUsuarioIdAndProdutoIdAndTamanhoIsNull(usuario.getId(), produto.getId())
+                    .orElse(null);
 
-                if (quantidadeTotal > 99) {
-                    throw new RegraDeNegocioException("Quantidade máxima excedida (99)");
-                }
-
-                // Atualizar item existente e remover o atual
-                itemExistenteComNovoTamanho.setQuantidade(quantidadeTotal);
-                carrinhoItemRepository.save(itemExistenteComNovoTamanho);
-                carrinhoItemRepository.delete(item);
-
-                return carrinhoItemMapper.toDTO(itemExistenteComNovoTamanho);
+            if (itemExistenteSemTamanho != null && !itemExistenteSemTamanho.getId().equals(itemId)) {
+                throw new RegraDeNegocioException(
+                    "Você já possui este produto no carrinho. Para adicionar mais unidades, ajuste a quantidade do item existente."
+                );
             }
         }
 
