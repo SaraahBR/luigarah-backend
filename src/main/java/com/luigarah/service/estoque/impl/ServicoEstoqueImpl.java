@@ -43,10 +43,12 @@ public class ServicoEstoqueImpl implements ServicoEstoque {
         List<Object[]> rows = repo.listarEstoquePorProduto(produtoId);
         List<ProdutoTamanhoDTO> out = new ArrayList<>(rows.size());
         for (Object[] r : rows) {
-            String etiqueta = (String) r[0];
-            Number qn = (Number) r[1];
+            Number id = (Number) r[0];
+            String etiqueta = (String) r[1];
+            Number qn = (Number) r[2];
 
             ProdutoTamanhoDTO dto = new ProdutoTamanhoDTO();
+            dto.setId(id != null ? id.longValue() : null);
             dto.setEtiqueta(etiqueta);
             dto.setQtdEstoque(qn == null ? 0 : qn.intValue());
             out.add(dto);

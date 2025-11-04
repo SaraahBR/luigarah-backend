@@ -273,8 +273,9 @@ public class CarrinhoService {
 
             var estoques = repositorioProduto.listarEstoquePorProduto(produtoId);
             for (Object[] row : estoques) {
-                String etiqueta = (String) row[0];
-                Number qtd = (Number) row[1];
+                // Query retorna: [id, etiqueta, qtd_estoque]
+                String etiqueta = (String) row[1];
+                Number qtd = (Number) row[2];
 
                 if (etiqueta != null && etiqueta.equalsIgnoreCase(tamanho.getEtiqueta())) {
                     return qtd != null ? qtd.intValue() : 0;

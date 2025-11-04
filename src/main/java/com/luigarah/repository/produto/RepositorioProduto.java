@@ -251,9 +251,9 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
     // ESTOQUE POR PRODUTO/TAMANHO (roupas/sapatos)
     // ---------------------------------------------------------------------
 
-    /** Lista (etiqueta, qtd_estoque) para o produto, ordenado pela ORDEM do catálogo. */
+    /** Lista (id, etiqueta, qtd_estoque) para o produto, ordenado pela ORDEM do catálogo. */
     @Query(value = """
-            SELECT t.etiqueta, pt.qtd_estoque
+            SELECT t.id, t.etiqueta, pt.qtd_estoque
               FROM produtos_tamanhos pt
               JOIN tamanhos t ON t.id = pt.tamanho_id
              WHERE pt.produto_id = :produtoId
