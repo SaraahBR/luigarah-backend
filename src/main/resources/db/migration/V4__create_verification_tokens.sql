@@ -4,6 +4,27 @@
 
 ALTER SESSION SET CURRENT_SCHEMA = APP_LUIGARAH;
 
+-- Drop se já existir (para permitir reexecução)
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE verification_tokens CASCADE CONSTRAINTS';
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLCODE != -942 THEN -- -942 = table does not exist
+            RAISE;
+        END IF;
+END;
+/
+
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE verification_tokens_seq';
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLCODE != -2289 THEN -- -2289 = sequence does not exist
+            RAISE;
+        END IF;
+END;
+/
+
 -- Criar tabela verification_tokens
 CREATE TABLE verification_tokens (
     id NUMBER PRIMARY KEY,
