@@ -7,6 +7,8 @@ import com.luigarah.dto.autenticacao.OAuthSyncRequest;
 import com.luigarah.dto.autenticacao.RegistroRequestDTO;
 import com.luigarah.dto.usuario.AtualizarPerfilRequest;
 import com.luigarah.dto.usuario.UsuarioDTO;
+import com.luigarah.exception.RecursoNaoEncontradoException;
+import com.luigarah.exception.RegraDeNegocioException;
 import com.luigarah.service.autenticacao.AuthService;
 import com.luigarah.service.storage.ImageStorageService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -368,6 +370,201 @@ public class ControladorAutenticacao {
         } catch (Exception e) {
             return ResponseEntity.status(400).body(
                 Map.of("sucesso", false, "mensagem", e.getMessage())
+            );
+        }
+    }
+
+    // ============================================================
+    // ENDPOINTS DE VERIFICAÇÃO DE EMAIL E RESET DE SENHA
+    // ============================================================
+
+    /**
+     * Envia código de verificação para confirmação de conta
+     * POST /api/auth/enviar-codigo-verificacao
+     */
+    @PostMapping("/enviar-codigo-verificacao")
+    @Operation(
+        summary = "Enviar código de verificação",
+        description = "Envia um código de 6 dígitos para o email do usuário para confirmação de conta. O código é válido por 12 horas."
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "Código enviado com sucesso",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(
+                    example = """
+                    {
+                      "sucesso": true,
+                      "mensagem": "Código de verificação enviado com sucesso! Verifique seu email."
+                    }
+                    """
+                )
+            )
+        ),
+        @ApiResponse(responseCode = "400", description = "Email não cadastrado ou conta já verificada"),
+        @ApiResponse(responseCode = "500", description = "Erro ao enviar email")
+    })
+    public ResponseEntity<?> enviarCodigoVerificacao(
+            @Valid @RequestBody com.luigarah.dto.autenticacao.EnviarCodigoVerificacaoRequest request) {
+        try {
+            authService.enviarCodigoVerificacao(request.getEmail());
+            return ResponseEntity.ok(
+                Map.of(
+                    "sucesso", true,
+                    "mensagem", "Código de verificação enviado com sucesso! Verifique seu email."
+                )
+            );
+        } catch (RecursoNaoEncontradoException | RegraDeNegocioException e) {
+            return ResponseEntity.status(400).body(
+                Map.of("sucesso", false, "mensagem", e.getMessage())
+            );
+        } catch (Exception e) {
+            log.error("Erro ao enviar código de verificação", e);
+            return ResponseEntity.status(500).body(
+                Map.of("sucesso", false, "mensagem", "Erro ao enviar código de verificação")
+            );
+        }
+    }
+
+    /**
+     * Verifica código de confirmação de conta
+     * POST /api/auth/verificar-codigo
+     */
+    @PostMapping("/verificar-codigo")
+    @Operation(
+        summary = "Verificar código de confirmação",
+        description = "Verifica o código de 6 dígitos enviado por email e confirma a conta do usuário. Retorna token JWT após confirmação."
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "Conta verificada com sucesso",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = AuthResponseDTO.class)
+            )
+        ),
+        @ApiResponse(responseCode = "400", description = "Código inválido, expirado ou já utilizado")
+    })
+    public ResponseEntity<?> verificarCodigo(
+            @Valid @RequestBody com.luigarah.dto.autenticacao.VerificarCodigoRequest request) {
+        try {
+            AuthResponseDTO response = authService.verificarCodigo(request.getEmail(), request.getCodigo());
+            return ResponseEntity.ok(response);
+        } catch (RecursoNaoEncontradoException | RegraDeNegocioException e) {
+            return ResponseEntity.status(400).body(
+                Map.of("sucesso", false, "mensagem", e.getMessage())
+            );
+        } catch (Exception e) {
+            log.error("Erro ao verificar código", e);
+            return ResponseEntity.status(500).body(
+                Map.of("sucesso", false, "mensagem", "Erro ao verificar código")
+            );
+        }
+    }
+
+    /**
+     * Solicita código para redefinição de senha
+     * POST /api/auth/solicitar-reset-senha
+     */
+    @PostMapping("/solicitar-reset-senha")
+    @Operation(
+        summary = "Solicitar código de redefinição de senha",
+        description = "Envia um código de 6 dígitos para o email do usuário para redefinição de senha. O código é válido por 12 horas."
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "Código enviado com sucesso",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(
+                    example = """
+                    {
+                      "sucesso": true,
+                      "mensagem": "Código de redefinição de senha enviado com sucesso! Verifique seu email."
+                    }
+                    """
+                )
+            )
+        ),
+        @ApiResponse(responseCode = "400", description = "Email não cadastrado ou conta OAuth"),
+        @ApiResponse(responseCode = "500", description = "Erro ao enviar email")
+    })
+    public ResponseEntity<?> solicitarResetSenha(
+            @Valid @RequestBody com.luigarah.dto.autenticacao.SolicitarResetSenhaRequest request) {
+        try {
+            authService.solicitarResetSenha(request.getEmail());
+            return ResponseEntity.ok(
+                Map.of(
+                    "sucesso", true,
+                    "mensagem", "Código de redefinição de senha enviado com sucesso! Verifique seu email."
+                )
+            );
+        } catch (RecursoNaoEncontradoException | RegraDeNegocioException e) {
+            return ResponseEntity.status(400).body(
+                Map.of("sucesso", false, "mensagem", e.getMessage())
+            );
+        } catch (Exception e) {
+            log.error("Erro ao solicitar reset de senha", e);
+            return ResponseEntity.status(500).body(
+                Map.of("sucesso", false, "mensagem", "Erro ao solicitar reset de senha")
+            );
+        }
+    }
+
+    /**
+     * Redefine senha usando código de verificação
+     * POST /api/auth/redefinir-senha
+     */
+    @PostMapping("/redefinir-senha")
+    @Operation(
+        summary = "Redefinir senha com código",
+        description = "Redefine a senha do usuário usando o código de 6 dígitos recebido por email."
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "Senha redefinida com sucesso",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(
+                    example = """
+                    {
+                      "sucesso": true,
+                      "mensagem": "Senha redefinida com sucesso! Você já pode fazer login com a nova senha."
+                    }
+                    """
+                )
+            )
+        ),
+        @ApiResponse(responseCode = "400", description = "Código inválido, expirado, já utilizado ou senhas não coincidem")
+    })
+    public ResponseEntity<?> redefinirSenha(
+            @Valid @RequestBody com.luigarah.dto.autenticacao.RedefinirSenhaComCodigoRequest request) {
+        try {
+            authService.redefinirSenhaComCodigo(
+                request.getEmail(),
+                request.getCodigo(),
+                request.getNovaSenha(),
+                request.getConfirmarNovaSenha()
+            );
+            return ResponseEntity.ok(
+                Map.of(
+                    "sucesso", true,
+                    "mensagem", "Senha redefinida com sucesso! Você já pode fazer login com a nova senha."
+                )
+            );
+        } catch (RecursoNaoEncontradoException | RegraDeNegocioException e) {
+            return ResponseEntity.status(400).body(
+                Map.of("sucesso", false, "mensagem", e.getMessage())
+            );
+        } catch (Exception e) {
+            log.error("Erro ao redefinir senha", e);
+            return ResponseEntity.status(500).body(
+                Map.of("sucesso", false, "mensagem", "Erro ao redefinir senha")
             );
         }
     }

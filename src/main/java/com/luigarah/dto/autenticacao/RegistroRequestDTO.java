@@ -30,8 +30,18 @@ public class RegistroRequestDTO {
     private String email;
 
     @NotBlank(message = "Senha é obrigatória")
-    @Size(min = 6, max = 100, message = "Senha deve ter entre 6 e 100 caracteres")
-    @Schema(description = "Senha do usuário", example = "senha123", required = true, minLength = 6, maxLength = 100)
+    @Size(min = 6, max = 40, message = "Senha deve ter entre 6 e 40 caracteres")
+    @Pattern(
+        regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&#])[A-Za-z\\d@$!%*?&#]{6,40}$",
+        message = "Senha deve conter: mínimo 6 e máximo 40 caracteres, 1 letra maiúscula, 1 letra minúscula, 1 número e 1 caractere especial (@$!%*?&#)"
+    )
+    @Schema(
+        description = "Senha do usuário. Deve conter: mínimo 6 e máximo 40 caracteres, 1 letra maiúscula, 1 letra minúscula, 1 número e 1 caractere especial (@$!%*?&#)",
+        example = "Senha@123",
+        required = true,
+        minLength = 6,
+        maxLength = 40
+    )
     private String senha;
 
     @Size(max = 20, message = "Telefone deve ter no máximo 20 caracteres")

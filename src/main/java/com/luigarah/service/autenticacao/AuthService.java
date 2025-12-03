@@ -17,10 +17,12 @@ import com.luigarah.model.autenticacao.AuthProvider;
 import com.luigarah.model.autenticacao.OAuthProvider;
 import com.luigarah.model.autenticacao.Role;
 import com.luigarah.model.autenticacao.Usuario;
+import com.luigarah.model.autenticacao.VerificationToken;
 import com.luigarah.model.usuario.Endereco;
 import com.luigarah.repository.autenticacao.EnderecoRepository;
 import com.luigarah.repository.autenticacao.UsuarioRepository;
 import com.luigarah.repository.autenticacao.OAuthProviderRepository;
+import com.luigarah.repository.autenticacao.VerificationTokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -32,9 +34,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -50,6 +54,8 @@ public class AuthService {
     private final OAuthProviderRepository oAuthProviderRepository;
     private final EnderecoRepository enderecoRepository;
     private final EnderecoMapper enderecoMapper;
+    private final EmailService emailService;
+    private final VerificationTokenRepository verificationTokenRepository;
 
     // Map para controlar locks por email (evita race condition)
     private final ConcurrentHashMap<String, Object> emailLocks = new ConcurrentHashMap<>();
@@ -310,7 +316,17 @@ public class AuthService {
 
         log.info("OAuth sync concluído com sucesso. Novo usuário: {}", isNewUser);
 
-        // 6. Retorna response
+        // 6. Envia email de boas-vindas para novos usuários OAuth
+        if (isNewUser) {
+            try {
+                emailService.enviarBoasVindas(usuario.getEmail(), usuario.getNome(), true);
+            } catch (Exception e) {
+                log.error("Erro ao enviar email de boas-vindas: {}", e.getMessage());
+                // Não interrompe o fluxo se o email falhar
+            }
+        }
+
+        // 7. Retorna response
         return AuthResponseDTO.builder()
                 .token(token)
                 .tipo("Bearer")
@@ -527,5 +543,256 @@ public class AuthService {
         enderecoRepository.delete(endereco);
 
         log.info("✅ Endereço removido com sucesso!");
+    }
+
+    // ============================================================
+    // MÉTODOS DE VERIFICAÇÃO DE EMAIL E RESET DE SENHA
+    // ============================================================
+
+    /**
+     * Envia código de verificação para confirmação de conta
+     */
+    @Transactional
+    public void enviarCodigoVerificacao(String email) {
+        log.info("📧 Enviando código de verificação para: {}", email);
+
+        // Verifica se o email existe
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Email não cadastrado"));
+
+        // Verifica se a conta já está verificada
+        if (usuario.getEmailVerificado()) {
+            throw new RegraDeNegocioException("Esta conta já está verificada");
+        }
+
+        // Remove tokens antigos de verificação deste email
+        verificationTokenRepository.deleteByEmailAndTipo(email, VerificationToken.TipoToken.VERIFICACAO_EMAIL);
+
+        // Gera novo código
+        String codigo = gerarCodigoAleatorio();
+
+        // Cria token de verificação (válido por 12 horas)
+        VerificationToken token = criarVerificationToken(
+                email,
+                codigo,
+                VerificationToken.TipoToken.VERIFICACAO_EMAIL,
+                12
+        );
+
+        verificationTokenRepository.save(token);
+
+        // Envia email com o código
+        emailService.enviarCodigoVerificacao(email, codigo, usuario.getNome());
+
+        log.info("✅ Código de verificação enviado com sucesso!");
+    }
+
+    /**
+     * Verifica código de confirmação de conta
+     */
+    @Transactional
+    public AuthResponseDTO verificarCodigo(String email, String codigo) {
+        log.info("🔍 Verificando código para: {}", email);
+
+        // Busca o usuário
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado"));
+
+        // Busca o token
+        VerificationToken token = verificationTokenRepository
+                .findLatestByEmailAndTipo(email, VerificationToken.TipoToken.VERIFICACAO_EMAIL)
+                .orElseThrow(() -> new RegraDeNegocioException("Código não encontrado. Solicite um novo código."));
+
+        // Valida o token
+        if (token.isExpirado()) {
+            throw new RegraDeNegocioException("Código expirado. Solicite um novo código.");
+        }
+
+        if (token.getUsado()) {
+            throw new RegraDeNegocioException("Código já foi utilizado. Solicite um novo código.");
+        }
+
+        if (!token.getCodigo().equals(codigo)) {
+            throw new RegraDeNegocioException("Código inválido.");
+        }
+
+        // Marca o token como usado
+        token.setUsado(true);
+        token.setUsadoEm(LocalDateTime.now());
+        verificationTokenRepository.save(token);
+
+        // Marca o email como verificado
+        usuario.setEmailVerificado(true);
+        usuarioRepository.save(usuario);
+
+        log.info("✅ Conta verificada com sucesso!");
+
+        // Envia email de boas-vindas
+        emailService.enviarBoasVindas(email, usuario.getNome(), false);
+
+        // Gera token JWT
+        String jwtToken = generateTokenForUser(usuario);
+        UsuarioDTO usuarioDTO = usuarioMapper.toDTO(usuario);
+
+        return AuthResponseDTO.builder()
+                .token(jwtToken)
+                .tipo("Bearer")
+                .usuario(usuarioDTO)
+                .build();
+    }
+
+    /**
+     * Solicita código para redefinição de senha
+     */
+    @Transactional
+    public void solicitarResetSenha(String email) {
+        log.info("📧 Solicitação de reset de senha para: {}", email);
+
+        // Verifica se o email existe
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Email não cadastrado"));
+
+        // Verifica se é conta local (não OAuth)
+        if (usuario.getProvider() != AuthProvider.LOCAL) {
+            throw new RegraDeNegocioException("Esta conta foi criada com " + usuario.getProvider() +
+                    ". Use o mesmo método para fazer login.");
+        }
+
+        // Remove tokens antigos de reset de senha deste email
+        verificationTokenRepository.deleteByEmailAndTipo(email, VerificationToken.TipoToken.RESET_SENHA);
+
+        // Gera novo código
+        String codigo = gerarCodigoAleatorio();
+
+        // Cria token de reset (válido por 12 horas)
+        VerificationToken token = criarVerificationToken(
+                email,
+                codigo,
+                VerificationToken.TipoToken.RESET_SENHA,
+                12
+        );
+
+        verificationTokenRepository.save(token);
+
+        // Envia email com o código
+        emailService.enviarCodigoResetSenha(email, codigo, usuario.getNome());
+
+        log.info("✅ Código de reset de senha enviado com sucesso!");
+    }
+
+    /**
+     * Redefine senha usando código de verificação
+     */
+    @Transactional
+    public void redefinirSenhaComCodigo(String email, String codigo, String novaSenha, String confirmarNovaSenha) {
+        log.info("🔑 Redefinindo senha para: {}", email);
+
+        // Valida se as senhas coincidem
+        if (!novaSenha.equals(confirmarNovaSenha)) {
+            throw new RegraDeNegocioException("As senhas não coincidem");
+        }
+
+        // Busca o usuário
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado"));
+
+        // Busca o token
+        VerificationToken token = verificationTokenRepository
+                .findLatestByEmailAndTipo(email, VerificationToken.TipoToken.RESET_SENHA)
+                .orElseThrow(() -> new RegraDeNegocioException("Código não encontrado. Solicite um novo código."));
+
+        // Valida o token
+        if (token.isExpirado()) {
+            throw new RegraDeNegocioException("Código expirado. Solicite um novo código.");
+        }
+
+        if (token.getUsado()) {
+            throw new RegraDeNegocioException("Código já foi utilizado. Solicite um novo código.");
+        }
+
+        if (!token.getCodigo().equals(codigo)) {
+            throw new RegraDeNegocioException("Código inválido.");
+        }
+
+        // Marca o token como usado
+        token.setUsado(true);
+        token.setUsadoEm(LocalDateTime.now());
+        verificationTokenRepository.save(token);
+
+        // Atualiza a senha
+        usuario.setSenha(passwordEncoder.encode(novaSenha));
+        usuarioRepository.save(usuario);
+
+        log.info("✅ Senha redefinida com sucesso!");
+    }
+
+    /**
+     * Gera código aleatório de 6 dígitos
+     */
+    private String gerarCodigoAleatorio() {
+        SecureRandom random = new SecureRandom();
+        int codigo = 100000 + random.nextInt(900000); // Gera número entre 100000 e 999999
+        return String.valueOf(codigo);
+    }
+
+    /**
+     * Cria um VerificationToken
+     */
+    private VerificationToken criarVerificationToken(String email, String codigo,
+                                                     VerificationToken.TipoToken tipo, int horasValidade) {
+        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime expiracao = agora.plusHours(horasValidade);
+
+        return VerificationToken.builder()
+                .codigo(codigo)
+                .token(UUID.randomUUID().toString())
+                .email(email)
+                .tipo(tipo)
+                .criadoEm(agora)
+                .expiraEm(expiracao)
+                .usado(false)
+                .build();
+    }
+
+    /**
+     * Atualiza o método registrar para NÃO enviar email de boas-vindas imediatamente
+     * (enviará apenas após verificação)
+     */
+    @Transactional
+    public AuthResponseDTO registrarComVerificacao(RegistroRequestDTO registroRequest) {
+        if (usuarioRepository.existsByEmail(registroRequest.getEmail())) {
+            throw new RegraDeNegocioException("Email já está em uso");
+        }
+
+        Usuario usuario = Usuario.builder()
+                .nome(registroRequest.getNome())
+                .sobrenome(registroRequest.getSobrenome())
+                .email(registroRequest.getEmail())
+                .senha(passwordEncoder.encode(registroRequest.getSenha()))
+                .telefone(registroRequest.getTelefone())
+                .dataNascimento(registroRequest.getDataNascimento())
+                .genero(registroRequest.getGenero())
+                .fotoPerfil(registroRequest.getFotoPerfil())
+                .role(Role.USER)
+                .ativo(true)
+                .emailVerificado(false) // Precisa verificar
+                .provider(AuthProvider.LOCAL)
+                .build();
+
+        usuario = usuarioRepository.save(usuario);
+
+        // Envia código de verificação
+        enviarCodigoVerificacao(usuario.getEmail());
+
+        // Gera token com as authorities corretas do usuário
+        String token = generateTokenForUser(usuario);
+
+        UsuarioDTO usuarioDTO = usuarioMapper.toDTO(usuario);
+
+        return AuthResponseDTO.builder()
+                .token(token)
+                .tipo("Bearer")
+                .usuario(usuarioDTO)
+                .build();
     }
 }

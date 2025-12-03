@@ -158,24 +158,34 @@
             <artifactId>s3</artifactId>
             <version>2.20.26</version>
         </dependency>
+
+        <!-- Email (JavaMail + Brevo API) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
+        <!-- Thymeleaf para templates de email -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+
+        <!-- HTTP Client para API do Brevo -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>4.12.0</version>
+        </dependency>
     </dependencies>
 
     <build>
-        <resources>
-            <resource>
-                <directory>src/main/resources</directory>
-                <filtering>true</filtering>
-            </resource>
-        </resources>
-
         <plugins>
-            <!-- Corrige charset e evita filtering em .sql, .ora, .jks, .json -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
                 <version>3.3.1</version>
                 <configuration>
-                    <encoding>UTF-8</encoding>
                     <nonFilteredFileExtensions>
                         <nonFilteredFileExtension>sql</nonFilteredFileExtension>
                         <nonFilteredFileExtension>ora</nonFilteredFileExtension>

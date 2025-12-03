@@ -49,6 +49,16 @@ wallet.zip
 *.ora
 *.json
 *.key
+
+# ============================
+# Variáveis de Ambiente (NUNCA subir)
+# ============================
+.env
+.env.local
+.env.production
+.env.development
+*.env
+!.env.example
 *.cer
 *.crt
 

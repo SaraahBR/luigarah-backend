@@ -2,6 +2,7 @@ package com.luigarah.dto.autenticacao;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -27,14 +28,18 @@ public class AlterarSenhaRequestDTO {
     private String senhaAtual;
 
     @Schema(
-            description = "Nova senha desejada. Recomenda-se usar letras maiúsculas, minúsculas, números e caracteres especiais.",
-            example = "MinhaNovaSenh@Segura2025!",
+            description = "Nova senha desejada. Deve conter: mínimo 6 e máximo 40 caracteres, 1 letra maiúscula, 1 letra minúscula, 1 número e 1 caractere especial (@$!%*?&#)",
+            example = "Senha@123",
             required = true,
             minLength = 6,
-            maxLength = 100
+            maxLength = 40
     )
     @NotBlank(message = "Nova senha é obrigatória")
-    @Size(min = 6, max = 100, message = "Nova senha deve ter entre 6 e 100 caracteres")
+    @Size(min = 6, max = 40, message = "Nova senha deve ter entre 6 e 40 caracteres")
+    @Pattern(
+        regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&#])[A-Za-z\\d@$!%*?&#]{6,40}$",
+        message = "Nova senha deve conter: mínimo 6 e máximo 40 caracteres, 1 letra maiúscula, 1 letra minúscula, 1 número e 1 caractere especial (@$!%*?&#)"
+    )
     private String novaSenha;
 
     @Schema(

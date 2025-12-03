@@ -21,6 +21,7 @@
 - [✨ Funcionalidades](#-funcionalidades)
 - [🏗️ Arquitetura e Design](#️-arquitetura-e-design)
 - [💻 Tecnologias e Frameworks](#-tecnologias-e-frameworks)
+- [📧 Sistema de Email (Brevo API)](#-sistema-de-email-brevo-api)
 - [📂 Estrutura do Projeto](#-estrutura-do-projeto)
   - [📦 Estrutura Completa de Pastas e Arquivos](#-estrutura-completa-de-pastas-e-arquivos)
   - [📦 Módulos Funcionais](#-módulos-funcionais)
@@ -57,7 +58,7 @@ O **Luigarah Backend** é uma API RESTful robusta e escalável desenvolvida para
 - ✅ **Arquitetura Modular** - Organizado seguindo Clean Architecture e DDD
 - ✅ **Autenticação JWT** - Sistema completo com roles (USER/ADMIN)
 - ✅ **OAuth2 Social Login** - Google, Facebook, GitHub
-- ✅ **Segurança Avançada** - Spring Security + validação de senhas fortes
+- ✅ **Segurança Avançada** - Spring Security + validação de senhas fortes (6-40 caracteres, maiúscula, minúscula, número e caractere especial)
 - ✅ **Banco Oracle Cloud** - Oracle Autonomous Database (ADB) Always Free
 - ✅ **Upload de Imagens** - Cloudflare R2 (S3-compatible) em produção
 - ✅ **Storage Local** - Armazenamento em disco para desenvolvimento
@@ -77,11 +78,20 @@ O **Luigarah Backend** é uma API RESTful robusta e escalável desenvolvida para
 - Registro de novos usuários com validação completa
 - Tokens JWT com expiração configurável (24h padrão)
 - Sistema de roles: **USER** (usuário comum) e **ADMIN** (administrador)
-- Alteração de senha segura com validação de força
+- Alteração de senha segura com validação de força (6-40 caracteres, 1 maiúscula, 1 minúscula, 1 número, 1 caractere especial)
 - **🆕 OAuth2 Social Login** - Google, Facebook, GitHub
 - **🆕 Sincronização OAuth** - Vinculação automática de contas sociais
 - Perfil de usuário (visualizar e editar)
 - **🆕 Gerenciamento de foto de perfil** - Upload ou URL
+
+### 📧 Sistema de Email (Brevo API)
+- **🆕 Verificação de conta** - Código de 6 dígitos válido por 12h
+- **🆕 Email de boas-vindas** - Enviado após verificação ou login OAuth
+- **🆕 Redefinição de senha** - Código de 6 dígitos para reset seguro
+- **🆕 Templates HTML responsivos** - Design moderno e profissional
+- **🆕 Integração Brevo API** - Envio confiável e escalável
+- **🆕 Validação de códigos** - Proteção contra reutilização e expiração
+- **🆕 Suporte a múltiplos idiomas** - Português BR implementado
 
 ### 👥 Administração de Usuários (ADMIN)
 - **Visualizar usuários** - Listar todos os usuários com paginação
@@ -260,6 +270,141 @@ O projeto segue rigorosamente os princípios de **Clean Architecture** e **Domai
 | **Docker** | Containerização da aplicação |
 | **Render** | Plataforma de deploy (PaaS) |
 | **GitHub** | Versionamento e CI/CD |
+
+### 📧 Email e Notificações
+
+| Tecnologia | Versão | Função |
+|------------|--------|--------|
+| **Brevo API** | V3 | Envio de emails transacionais |
+| **Spring Mail** | 3.2.0 | Suporte SMTP integrado |
+| **RestTemplate** | 3.2.0 | Cliente HTTP para Brevo API |
+
+---
+
+## 📧 Sistema de Email (Brevo API)
+
+O sistema de email utiliza a **Brevo API** (anteriormente Sendinblue) para envio confiável e escalável de emails transacionais.
+
+### ✨ Funcionalidades de Email
+
+#### 1. 📨 Verificação de Conta
+Após cadastro tradicional (email/senha), o sistema:
+- Gera código aleatório de **6 dígitos** (SecureRandom)
+- Envia email com template HTML responsivo
+- Código válido por **12 horas**
+- Validação de uso único (não pode ser reutilizado)
+- Email de boas-vindas após confirmação
+
+#### 2. 🎉 Email de Boas-Vindas
+Enviado automaticamente em duas situações:
+- Após **verificação de conta** via código (cadastro tradicional)
+- Na **primeira vez** que usuário faz login via OAuth (Google, Facebook, GitHub)
+- Template moderno com gradiente e call-to-action
+
+#### 3. 🔐 Redefinição de Senha
+Para usuários que esqueceram a senha:
+- Gera código de **6 dígitos** para reset
+- Válido por **12 horas**
+- Apenas contas **locais** (não OAuth) podem redefinir senha
+- Validação de senhas coincidentes
+- Atualização segura com BCrypt
+
+### 🔌 Endpoints de Email
+
+| Método | Endpoint | Descrição | Auth |
+|--------|----------|-----------|------|
+| POST | `/api/auth/enviar-codigo-verificacao` | Envia código de verificação | ❌ Público |
+| POST | `/api/auth/verificar-codigo` | Valida código e ativa conta | ❌ Público |
+| POST | `/api/auth/solicitar-reset-senha` | Solicita código de reset | ❌ Público |
+| POST | `/api/auth/redefinir-senha` | Redefine senha com código | ❌ Público |
+
+### 📋 Exemplos de Request/Response
+
+#### Enviar Código de Verificação
+```bash
+POST /api/auth/enviar-codigo-verificacao
+Content-Type: application/json
+
+{
+  "email": "usuario@example.com"
+}
+```
+
+**Response 200:**
+```json
+{
+  "sucesso": true,
+  "mensagem": "Código de verificação enviado com sucesso! Verifique seu email."
+}
+```
+
+#### Verificar Código
+```bash
+POST /api/auth/verificar-codigo
+Content-Type: application/json
+
+{
+  "email": "usuario@example.com",
+  "codigo": "123456"
+}
+```
+
+**Response 200:**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "tipo": "Bearer",
+  "usuario": {
+    "id": 1,
+    "nome": "João",
+    "email": "usuario@example.com",
+    "emailVerificado": true,
+    "role": "USER"
+  }
+}
+```
+
+### 🎨 Templates de Email
+
+Todos os emails utilizam **templates HTML responsivos** com:
+- ✅ Design moderno com gradientes
+- ✅ Compatibilidade mobile/desktop
+- ✅ Códigos destacados em caixas visuais
+- ✅ Alertas de expiração e segurança
+- ✅ Branding consistente (Luigarah)
+
+### 🔒 Segurança
+
+- **Códigos gerados com SecureRandom** - Máxima aleatoriedade
+- **Expiração de 12 horas** - Códigos não ficam válidos indefinidamente
+- **Uso único** - Código marcado como "usado" após validação
+- **Validação de tipo de conta** - OAuth não pode redefinir senha
+- **Rate limiting recomendado** - Evitar spam de códigos
+
+### ⚙️ Configuração
+
+As credenciais da Brevo estão **externalizadas** como variáveis de ambiente:
+
+```properties
+# Brevo SMTP
+BREVO_SMTP_HOST=smtp-relay.brevo.com
+BREVO_SMTP_PORT=587
+BREVO_SMTP_USERNAME=${CREDENCIAL_PROTEGIDA}
+BREVO_SMTP_PASSWORD=${CREDENCIAL_PROTEGIDA}
+
+# Brevo API
+BREVO_API_KEY=${CREDENCIAL_PROTEGIDA}
+BREVO_SENDER_EMAIL=luigarah@gmail.com
+BREVO_SENDER_NAME=Luigarah
+```
+
+> 🔐 **Segurança:** As credenciais reais são protegidas e configuradas via variáveis de ambiente no servidor (Render).
+
+### 📚 Documentação para Frontend
+
+Para integração completa com o frontend, consulte:
+- 📄 **`DOCUMENTACAO_API_EMAIL_FRONTEND.md`** - Guia completo com exemplos React/TypeScript
+- 📖 **Swagger UI** - Documentação interativa em `/swagger-ui`
 
 ---
 
