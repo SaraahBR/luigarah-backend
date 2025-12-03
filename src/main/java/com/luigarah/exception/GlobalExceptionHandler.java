@@ -31,17 +31,35 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(RecursoNaoEncontradoException.class)
-    public ResponseEntity<RespostaProdutoDTO<Object>> tratarRecursoNaoEncontrado(
+    public ResponseEntity<ErrorResponseDTO> tratarRecursoNaoEncontrado(
             RecursoNaoEncontradoException ex, WebRequest request) {
-        RespostaProdutoDTO<Object> resposta = RespostaProdutoDTO.erro(ex.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(resposta);
+        ErrorResponseDTO erro = ErrorResponseDTO.of(
+                404,
+                "E-mail não encontrado",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(erro);
     }
 
     @ExceptionHandler(RegraDeNegocioException.class)
-    public ResponseEntity<RespostaProdutoDTO<Object>> tratarRegraDeNegocio(
+    public ResponseEntity<ErrorResponseDTO> tratarRegraDeNegocio(
             RegraDeNegocioException ex, WebRequest request) {
-        RespostaProdutoDTO<Object> resposta = RespostaProdutoDTO.erro(ex.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(resposta);
+        // Identifica o tipo específico de erro pela mensagem
+        String error = "Erro de validação";
+        if (ex.getMessage().contains("já foi verificado")) {
+            error = "Conta já verificada";
+        } else if (ex.getMessage().contains("não foi verificada")) {
+            error = "Conta não verificada";
+        } else if (ex.getMessage().contains("Email já está em uso")) {
+            error = "E-mail em uso";
+        }
+
+        ErrorResponseDTO erro = ErrorResponseDTO.of(
+                400,
+                error,
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(erro);
     }
 
     // =====================================================
@@ -65,6 +83,28 @@ public class GlobalExceptionHandler {
         ErrorResponseDTO erro = ErrorResponseDTO.of(
                 400,
                 "Conta OAuth existente",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(erro);
+    }
+
+    @ExceptionHandler(CodigoVerificacaoInvalidoException.class)
+    public ResponseEntity<ErrorResponseDTO> tratarCodigoVerificacaoInvalido(
+            CodigoVerificacaoInvalidoException ex, WebRequest request) {
+        ErrorResponseDTO erro = ErrorResponseDTO.of(
+                400,
+                ex.getTipoErro(),
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(erro);
+    }
+
+    @ExceptionHandler(SenhaInvalidaException.class)
+    public ResponseEntity<ErrorResponseDTO> tratarSenhaInvalida(
+            SenhaInvalidaException ex, WebRequest request) {
+        ErrorResponseDTO erro = ErrorResponseDTO.of(
+                400,
+                "Senha inválida",
                 ex.getMessage()
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(erro);

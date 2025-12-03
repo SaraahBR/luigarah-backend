@@ -199,6 +199,74 @@ O projeto segue rigorosamente os princípios de **Clean Architecture** e **Domai
 | **Java** | 21 LTS | Linguagem principal (Oracle JDK) |
 | **Maven** | 3.9+ | Gerenciamento de dependências e build |
 
+### 📧 Sistema de Email (Brevo API)
+
+O sistema de e-mail é integrado com a **Brevo API** (anteriormente SendInBlue) para envio confiável e escalável de e-mails transacionais.
+
+#### Funcionalidades de E-mail
+
+| Funcionalidade | Descrição | Validade |
+|----------------|-----------|----------|
+| **Verificação de Conta** | Código de 6 dígitos para confirmar email | 12 horas |
+| **Redefinição de Senha** | Código de 6 dígitos para reset seguro | 12 horas |
+| **Boas-vindas (Cadastro)** | Enviado após verificação de conta | - |
+| **Boas-vindas (OAuth)** | Enviado no primeiro login via Google/Facebook/GitHub | - |
+
+#### Configuração
+
+As credenciais da Brevo API são configuradas via **variáveis de ambiente** por segurança:
+
+```env
+BREVO_API_KEY=xkeysib-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+BREVO_SENDER_EMAIL=luigarah@gmail.com
+BREVO_SENDER_NAME=Luigarah
+```
+
+#### Templates de E-mail
+
+Todos os e-mails seguem um design HTML responsivo e moderno:
+
+1. **E-mail de Código de Verificação**
+   - Assunto: "Código de Verificação - Luigarah"
+   - Conteúdo: Código de 6 dígitos com validade de 12h
+   - Design: Card centralizado com código destacado
+
+2. **E-mail de Código de Redefinição de Senha**
+   - Assunto: "Código de Redefinição de Senha - Luigarah"
+   - Conteúdo: Código de 6 dígitos com instruções claras
+   - Design: Card com aviso de segurança
+
+3. **E-mail de Boas-vindas**
+   - Assunto: "Bem-vindo ao Luigarah!"
+   - Conteúdo: Mensagem de boas-vindas personalizada
+   - Variações: Cadastro tradicional e OAuth
+
+#### Endpoints de E-mail
+
+| Endpoint | Método | Descrição |
+|----------|--------|-----------|
+| `/api/auth/enviar-codigo-verificacao` | POST | Envia código de verificação |
+| `/api/auth/verificar-codigo` | POST | Valida código e ativa conta |
+| `/api/auth/solicitar-reset-senha` | POST | Envia código de reset |
+| `/api/auth/redefinir-senha` | POST | Redefine senha com código |
+
+> 📖 **Documentação Completa:** [`docs/API-AUTENTICACAO-EMAIL.md`](docs/API-AUTENTICACAO-EMAIL.md)
+
+#### Validação de Códigos
+
+- ✅ Códigos únicos de 6 dígitos numéricos
+- ✅ Validade de 12 horas
+- ✅ Proteção contra reutilização (cada código pode ser usado apenas uma vez)
+- ✅ Limpeza automática de códigos antigos
+- ✅ Validação de expiração no backend
+
+#### Segurança
+
+- 🔒 Credenciais Brevo externalizadas (nunca no código)
+- 🔒 Códigos aleatórios e criptograficamente seguros
+- 🔒 Rate limiting configurável (futuro)
+- 🔒 Logs de auditoria de envios
+
 ### 🌱 Spring Framework
 
 | Framework | Versão | Função |
@@ -373,7 +441,32 @@ Todos os emails utilizam **templates HTML responsivos** com:
 - ✅ Alertas de expiração e segurança
 - ✅ Branding consistente (Luigarah)
 
-### 🔒 Segurança
+### 🔒 Segurança e Validação de Senha
+
+#### Regras de Senha Obrigatórias
+
+**Todas as senhas devem atender aos seguintes requisitos:**
+
+| Requisito | Descrição |
+|-----------|-----------|
+| **Comprimento mínimo** | 6 caracteres |
+| **Comprimento máximo** | 40 caracteres |
+| **Letra maiúscula** | Pelo menos 1 (A-Z) |
+| **Letra minúscula** | Pelo menos 1 (a-z) |
+| **Número** | Pelo menos 1 (0-9) |
+| **Caractere especial** | Pelo menos 1 (!@#$%^&*(),.?":{}|<>) |
+
+**Exemplos de senhas válidas:**
+- `SenhaForte123!`
+- `Luig@rAh2025`
+- `Test#Pass456`
+
+**Validação automática:**
+- ✅ No registro de novo usuário
+- ✅ Na redefinição de senha
+- ✅ Na alteração de senha
+
+#### Segurança de Códigos de Verificação
 
 - **Códigos gerados com SecureRandom** - Máxima aleatoriedade
 - **Expiração de 12 horas** - Códigos não ficam válidos indefinidamente

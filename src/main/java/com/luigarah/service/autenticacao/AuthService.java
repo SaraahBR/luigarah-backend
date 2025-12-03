@@ -9,11 +9,13 @@ import com.luigarah.dto.autenticacao.OAuthSyncRequest;
 import com.luigarah.dto.usuario.AtualizarPerfilRequest;
 import com.luigarah.dto.usuario.EnderecoDTO;
 import com.luigarah.dto.usuario.UsuarioDTO;
+import com.luigarah.exception.CodigoVerificacaoInvalidoException;
 import com.luigarah.exception.ContaNaoVerificadaException;
 import com.luigarah.exception.ContaOAuthExistenteException;
 import com.luigarah.exception.CredenciaisInvalidasException;
 import com.luigarah.exception.RecursoNaoEncontradoException;
 import com.luigarah.exception.RegraDeNegocioException;
+import com.luigarah.exception.SenhaInvalidaException;
 import com.luigarah.mapper.usuario.EnderecoMapper;
 import com.luigarah.mapper.usuario.UsuarioMapper;
 import com.luigarah.model.autenticacao.AuthProvider;
@@ -109,6 +111,9 @@ public class AuthService {
     @Transactional
     public AuthResponseDTO registrar(RegistroRequestDTO registroRequest) {
         String email = registroRequest.getEmail();
+
+        // Valida os requisitos da senha
+        validarSenha(registroRequest.getSenha());
 
         // Verifica se o email já existe
         if (usuarioRepository.existsByEmail(email)) {
@@ -657,19 +662,31 @@ public class AuthService {
         // Busca o token
         VerificationToken token = verificationTokenRepository
                 .findLatestByEmailAndTipo(email, VerificationToken.TipoToken.VERIFICACAO_EMAIL)
-                .orElseThrow(() -> new RegraDeNegocioException("Código não encontrado. Solicite um novo código."));
+                .orElseThrow(() -> new CodigoVerificacaoInvalidoException(
+                        "Código não encontrado. Solicite um novo código.",
+                        "Código não encontrado"
+                ));
 
         // Valida o token
         if (token.isExpirado()) {
-            throw new RegraDeNegocioException("Código expirado. Solicite um novo código.");
+            throw new CodigoVerificacaoInvalidoException(
+                    "Código expirado. Solicite um novo código.",
+                    "Código expirado"
+            );
         }
 
         if (token.getUsado()) {
-            throw new RegraDeNegocioException("Código já foi utilizado. Solicite um novo código.");
+            throw new CodigoVerificacaoInvalidoException(
+                    "Código já foi utilizado. Solicite um novo código.",
+                    "Código já utilizado"
+            );
         }
 
         if (!token.getCodigo().equals(codigo)) {
-            throw new RegraDeNegocioException("Código inválido.");
+            throw new CodigoVerificacaoInvalidoException(
+                    "Código inválido.",
+                    "Código inválido"
+            );
         }
 
         // Marca o token como usado
@@ -748,6 +765,9 @@ public class AuthService {
             throw new RegraDeNegocioException("As senhas não coincidem");
         }
 
+        // Valida os requisitos da senha
+        validarSenha(novaSenha);
+
         // Busca o usuário
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado"));
@@ -755,19 +775,31 @@ public class AuthService {
         // Busca o token
         VerificationToken token = verificationTokenRepository
                 .findLatestByEmailAndTipo(email, VerificationToken.TipoToken.RESET_SENHA)
-                .orElseThrow(() -> new RegraDeNegocioException("Código não encontrado. Solicite um novo código."));
+                .orElseThrow(() -> new CodigoVerificacaoInvalidoException(
+                        "Código não encontrado. Solicite um novo código.",
+                        "Código não encontrado"
+                ));
 
         // Valida o token
         if (token.isExpirado()) {
-            throw new RegraDeNegocioException("Código expirado. Solicite um novo código.");
+            throw new CodigoVerificacaoInvalidoException(
+                    "Código expirado. Solicite um novo código.",
+                    "Código expirado"
+            );
         }
 
         if (token.getUsado()) {
-            throw new RegraDeNegocioException("Código já foi utilizado. Solicite um novo código.");
+            throw new CodigoVerificacaoInvalidoException(
+                    "Código já foi utilizado. Solicite um novo código.",
+                    "Código já utilizado"
+            );
         }
 
         if (!token.getCodigo().equals(codigo)) {
-            throw new RegraDeNegocioException("Código inválido.");
+            throw new CodigoVerificacaoInvalidoException(
+                    "Código inválido.",
+                    "Código inválido"
+            );
         }
 
         // Marca o token como usado
@@ -780,6 +812,40 @@ public class AuthService {
         usuarioRepository.save(usuario);
 
         log.info("✅ Senha redefinida com sucesso!");
+    }
+
+    /**
+     * Valida os requisitos da senha
+     * Mínimo 6 caracteres, Máximo 40 caracteres, 1 maiúscula, 1 minúscula, 1 número e 1 caractere especial
+     */
+    private void validarSenha(String senha) {
+        if (senha == null || senha.trim().isEmpty()) {
+            throw new SenhaInvalidaException("A senha é obrigatória");
+        }
+
+        if (senha.length() < 6) {
+            throw new SenhaInvalidaException("A senha deve ter no mínimo 6 caracteres");
+        }
+
+        if (senha.length() > 40) {
+            throw new SenhaInvalidaException("A senha deve ter no máximo 40 caracteres");
+        }
+
+        if (!senha.matches(".*[A-Z].*")) {
+            throw new SenhaInvalidaException("A senha deve conter pelo menos uma letra maiúscula");
+        }
+
+        if (!senha.matches(".*[a-z].*")) {
+            throw new SenhaInvalidaException("A senha deve conter pelo menos uma letra minúscula");
+        }
+
+        if (!senha.matches(".*\\d.*")) {
+            throw new SenhaInvalidaException("A senha deve conter pelo menos um número");
+        }
+
+        if (!senha.matches(".*[!@#$%^&*(),.?\":{}|<>].*")) {
+            throw new SenhaInvalidaException("A senha deve conter pelo menos um caractere especial (!@#$%^&*(),.?\":{}|<>)");
+        }
     }
 
     /**
