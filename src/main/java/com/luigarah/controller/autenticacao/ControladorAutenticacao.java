@@ -5,6 +5,7 @@ import com.luigarah.dto.autenticacao.AuthResponseDTO;
 import com.luigarah.dto.autenticacao.LoginRequestDTO;
 import com.luigarah.dto.autenticacao.OAuthSyncRequest;
 import com.luigarah.dto.autenticacao.RegistroRequestDTO;
+import com.luigarah.dto.usuario.AtualizarPerfilRequest;
 import com.luigarah.dto.usuario.EnderecoDTO;
 import com.luigarah.dto.usuario.UsuarioDTO;
 import com.luigarah.service.autenticacao.AuthService;
