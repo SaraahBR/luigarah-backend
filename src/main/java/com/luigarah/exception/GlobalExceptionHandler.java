@@ -1,5 +1,6 @@
 package com.luigarah.exception;
 
+import com.luigarah.dto.error.ErrorResponseDTO;
 import com.luigarah.dto.produto.RespostaProdutoDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,11 +44,52 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(resposta);
     }
 
+    // =====================================================
+    // HANDLERS ESPECÍFICOS PARA AUTENTICAÇÃO
+    // =====================================================
+
+    @ExceptionHandler(ContaNaoVerificadaException.class)
+    public ResponseEntity<ErrorResponseDTO> tratarContaNaoVerificada(
+            ContaNaoVerificadaException ex, WebRequest request) {
+        ErrorResponseDTO erro = ErrorResponseDTO.of(
+                403,
+                "Verificação pendente",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(erro);
+    }
+
+    @ExceptionHandler(ContaOAuthExistenteException.class)
+    public ResponseEntity<ErrorResponseDTO> tratarContaOAuthExistente(
+            ContaOAuthExistenteException ex, WebRequest request) {
+        ErrorResponseDTO erro = ErrorResponseDTO.of(
+                400,
+                "Conta OAuth existente",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(erro);
+    }
+
+    @ExceptionHandler(CredenciaisInvalidasException.class)
+    public ResponseEntity<ErrorResponseDTO> tratarCredenciaisInvalidasCustom(
+            CredenciaisInvalidasException ex, WebRequest request) {
+        ErrorResponseDTO erro = ErrorResponseDTO.of(
+                401,
+                "Credenciais inválidas",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(erro);
+    }
+
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<RespostaProdutoDTO<Object>> tratarCredenciaisInvalidas(
+    public ResponseEntity<ErrorResponseDTO> tratarCredenciaisInvalidas(
             BadCredentialsException ex, WebRequest request) {
-        RespostaProdutoDTO<Object> resposta = RespostaProdutoDTO.erro("Email ou senha incorretos");
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(resposta);
+        ErrorResponseDTO erro = ErrorResponseDTO.of(
+                401,
+                "Credenciais inválidas",
+                "E-mail ou senha incorretos"
+        );
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(erro);
     }
 
     @ExceptionHandler(UsernameNotFoundException.class)

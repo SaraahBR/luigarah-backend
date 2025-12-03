@@ -9,6 +9,9 @@ import com.luigarah.dto.autenticacao.OAuthSyncRequest;
 import com.luigarah.dto.usuario.AtualizarPerfilRequest;
 import com.luigarah.dto.usuario.EnderecoDTO;
 import com.luigarah.dto.usuario.UsuarioDTO;
+import com.luigarah.exception.ContaNaoVerificadaException;
+import com.luigarah.exception.ContaOAuthExistenteException;
+import com.luigarah.exception.CredenciaisInvalidasException;
 import com.luigarah.exception.RecursoNaoEncontradoException;
 import com.luigarah.exception.RegraDeNegocioException;
 import com.luigarah.mapper.usuario.EnderecoMapper;
@@ -26,6 +29,7 @@ import com.luigarah.repository.autenticacao.VerificationTokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -62,42 +66,80 @@ public class AuthService {
 
     @Transactional
     public AuthResponseDTO login(LoginRequestDTO loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        loginRequest.getEmail(),
-                        loginRequest.getSenha()
-                )
-        );
-
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-
-        String token = tokenProvider.generateToken(authentication);
-
+        // Verifica se o usuário existe antes de tentar autenticar
         Usuario usuario = usuarioRepository.findByEmail(loginRequest.getEmail())
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado"));
+                .orElseThrow(() -> new CredenciaisInvalidasException("E-mail ou senha incorretos"));
 
-        usuario.setUltimoAcesso(LocalDateTime.now());
-        usuarioRepository.save(usuario);
+        // Valida se a conta foi verificada (apenas para contas LOCAL)
+        if (usuario.getProvider() == AuthProvider.LOCAL && !usuario.getEmailVerificado()) {
+            throw new ContaNaoVerificadaException(
+                    "Sua conta ainda não foi verificada. Clique em 'Reenviar código de verificação'."
+            );
+        }
 
-        UsuarioDTO usuarioDTO = usuarioMapper.toDTO(usuario);
+        try {
+            // Tenta autenticar
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getEmail(),
+                            loginRequest.getSenha()
+                    )
+            );
 
-        return AuthResponseDTO.builder()
-                .token(token)
-                .tipo("Bearer")
-                .usuario(usuarioDTO)
-                .build();
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            String token = tokenProvider.generateToken(authentication);
+
+            usuario.setUltimoAcesso(LocalDateTime.now());
+            usuarioRepository.save(usuario);
+
+            UsuarioDTO usuarioDTO = usuarioMapper.toDTO(usuario);
+
+            return AuthResponseDTO.builder()
+                    .token(token)
+                    .tipo("Bearer")
+                    .usuario(usuarioDTO)
+                    .build();
+
+        } catch (BadCredentialsException e) {
+            throw new CredenciaisInvalidasException("E-mail ou senha incorretos");
+        }
     }
 
     @Transactional
     public AuthResponseDTO registrar(RegistroRequestDTO registroRequest) {
-        if (usuarioRepository.existsByEmail(registroRequest.getEmail())) {
-            throw new RegraDeNegocioException("Email já está em uso");
+        String email = registroRequest.getEmail();
+
+        // Verifica se o email já existe
+        if (usuarioRepository.existsByEmail(email)) {
+            Usuario usuarioExistente = usuarioRepository.findByEmail(email)
+                    .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado"));
+
+            // Cenário 1: Conta OAuth existente
+            if (usuarioExistente.getProvider() != AuthProvider.LOCAL) {
+                String providerNome = usuarioExistente.getProvider().name();
+                throw new ContaOAuthExistenteException(
+                        "Esta conta foi criada com " + providerNome + ". Use o botão correspondente para fazer login.",
+                        providerNome
+                );
+            }
+
+            // Cenário 2: Email já cadastrado e verificado
+            if (usuarioExistente.getEmailVerificado()) {
+                throw new RegraDeNegocioException("Este e-mail já foi verificado. Faça login para acessar sua conta.");
+            }
+
+            // Cenário 3: Email já cadastrado mas NÃO verificado
+            throw new ContaNaoVerificadaException(
+                    "Esta conta já está cadastrada mas não foi verificada. Clique em 'Reenviar código de verificação'."
+            );
         }
 
+        // Cria nova conta LOCAL
         Usuario usuario = Usuario.builder()
                 .nome(registroRequest.getNome())
                 .sobrenome(registroRequest.getSobrenome())
-                .email(registroRequest.getEmail())
+                .email(email)
                 .senha(passwordEncoder.encode(registroRequest.getSenha()))
                 .telefone(registroRequest.getTelefone())
                 .dataNascimento(registroRequest.getDataNascimento())
@@ -556,15 +598,29 @@ public class AuthService {
     public void enviarCodigoVerificacao(String email) {
         log.info("📧 Enviando código de verificação para: {}", email);
 
-        // Verifica se o email existe
+        // Cenário 1: Email não encontrado
         Usuario usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Email não cadastrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException(
+                        "Esta conta não existe. Por favor, crie uma conta primeiro."
+                ));
 
-        // Verifica se a conta já está verificada
-        if (usuario.getEmailVerificado()) {
-            throw new RegraDeNegocioException("Esta conta já está verificada");
+        // Cenário 2: Conta OAuth
+        if (usuario.getProvider() != AuthProvider.LOCAL) {
+            String providerNome = usuario.getProvider().name();
+            throw new ContaOAuthExistenteException(
+                    "Esta conta foi criada com " + providerNome + ". Use o botão correspondente para fazer login.",
+                    providerNome
+            );
         }
 
+        // Cenário 3: Conta já verificada
+        if (usuario.getEmailVerificado()) {
+            throw new RegraDeNegocioException(
+                    "Este e-mail já foi verificado. Faça login para acessar sua conta."
+            );
+        }
+
+        // Cenário 4: Sucesso - envia código
         // Remove tokens antigos de verificação deste email
         verificationTokenRepository.deleteByEmailAndTipo(email, VerificationToken.TipoToken.VERIFICACAO_EMAIL);
 
