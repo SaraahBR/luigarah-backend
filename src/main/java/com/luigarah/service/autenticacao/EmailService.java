@@ -141,14 +141,14 @@ public class EmailService {
                 <body>
                     <div class="email-wrapper">
                         <div class="logo-container">
-                            <img src="https://raw.githubusercontent.com/SaraahBR/Luigarah/main/public/logos/LH_FUNDO_BRANCO.png" alt="Luigarah" class="logo">
+                            <img src="https://github.com/SaraahBR/Luigarah/blob/main/public/logos/LUIGARA-LOGO.png?raw=true" alt="Luigarah" class="logo" style="max-width: 350px; width: 100%%; height: auto;">
                         </div>
                         <div class="header">
-                            <h1>Bem-vindo(a) ao Luigarah! 🎉</h1>
+                            <h1 style="font-family: 'Playfair Display', 'Times New Roman', serif; font-size: 36px; font-weight: bold; letter-spacing: 0.15em; margin: 0;">LUIGARAH</h1>
                         </div>
                         <div class="content">
                             <h2>Olá, %s!</h2>
-                            <p>É um prazer tê-lo(a) conosco!</p>
+                            <p>É um prazer tê-lo(a) conosco! ♡</p>
                             <p>Obrigado por %s no <strong>Luigarah</strong> - sua nova plataforma de moda e estilo!</p>
                             <p>Estamos animados para você explorar nossas coleções exclusivas e encontrar peças perfeitas para você.</p>
                             
@@ -156,10 +156,10 @@ public class EmailService {
                             
                             <p><strong>O que você pode fazer agora:</strong></p>
                             <ul>
-                                <li>🛍️ Explorar nossos produtos</li>
-                                <li>❤️ Adicionar itens à sua lista de desejos</li>
-                                <li>🛒 Fazer seu primeiro pedido</li>
-                                <li>👤 Personalizar seu perfil</li>
+                                <li>▪ Explorar nossos produtos</li>
+                                <li>▪ Adicionar itens à sua lista de desejos</li>
+                                <li>▪ Fazer seu primeiro pedido</li>
+                                <li>▪ Personalizar seu perfil</li>
                             </ul>
                             
                             <div class="button-container">
@@ -306,10 +306,10 @@ public class EmailService {
                 <body>
                     <div class="email-wrapper">
                         <div class="logo-container">
-                            <img src="https://raw.githubusercontent.com/SaraahBR/Luigarah/main/public/logos/LH_FUNDO_BRANCO.png" alt="Luigarah" class="logo">
+                            <img src="https://github.com/SaraahBR/Luigarah/blob/main/public/logos/LUIGARA-LOGO.png?raw=true" alt="Luigarah" class="logo" style="max-width: 350px; width: 100%%; height: auto;">
                         </div>
                         <div class="header">
-                            <h1>🔐 Verificação de Conta</h1>
+                            <h1 style="font-family: 'Playfair Display', 'Times New Roman', serif; font-size: 36px; font-weight: bold; letter-spacing: 0.15em; margin: 0;">LUIGARAH</h1>
                         </div>
                         <div class="content">
                             <h2>Olá, %s!</h2>
@@ -329,7 +329,7 @@ public class EmailService {
                             <div class="divider"></div>
                             
                             <p>Se você não solicitou este código, por favor ignore este email.</p>
-                            <p>Estamos quase lá! Após a verificação, você terá acesso completo à plataforma. 🎉</p>
+                            <p>Estamos quase lá! Após a verificação, você terá acesso completo à plataforma.</p>
                             <p style="margin-top: 30px; color: #1a1a1a;"><strong>Equipe Luigarah</strong></p>
                         </div>
                         <div class="footer">
@@ -480,11 +480,10 @@ public class EmailService {
                 <body>
                     <div class="email-wrapper">
                         <div class="logo-container">
-                            <img src="https://raw.githubusercontent.com/SaraahBR/Luigarah/main/public/logos/LH_FUNDO_BRANCO.png" alt="Luigarah" class="logo">
-                            <h1 style="font-family: 'Playfair Display', 'Times New Roman', serif; font-size: 36px; font-weight: bold; letter-spacing: 0.15em; color: #1a1a1a; margin: 20px 0 0 0;">LUIGARAH</h1>
+                            <img src="https://github.com/SaraahBR/Luigarah/blob/main/public/logos/LUIGARA-LOGO.png?raw=true" alt="Luigarah" class="logo" style="max-width: 350px; width: 100%%; height: auto;">
                         </div>
                         <div class="header">
-                            <h1>🔑 Redefinição de Senha</h1>
+                            <h1 style="font-family: 'Playfair Display', 'Times New Roman', serif; font-size: 36px; font-weight: bold; letter-spacing: 0.15em; margin: 0;">LUIGARAH</h1>
                         </div>
                         <div class="content">
                             <h2>Olá, %s!</h2>
