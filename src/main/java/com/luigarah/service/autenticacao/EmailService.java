@@ -163,13 +163,13 @@ public class EmailService {
                             </ul>
                             
                             <div class="button-container">
-                                <a href="%s" class="button">Começar a Comprar</a>
+                                <a href="https://luigarah.vercel.app/" class="button">Começar a Comprar</a>
                             </div>
                             
                             <div class="divider"></div>
                             
                             <p>Se precisar de ajuda, nossa equipe está sempre disponível para você!</p>
-                            <p style="margin-top: 30px; color: #1a1a1a;"><strong>Equipe Luigarah</strong></p>
+                            <p style="margin-top: 20px; color: #1a1a1a;"><strong>Equipe Luigarah</strong></p>
                         </div>
                         <div class="footer">
                             <p>© 2025 Luigarah. Todos os direitos reservados.</p>
@@ -208,108 +208,107 @@ public class EmailService {
                         * { margin: 0; padding: 0; box-sizing: border-box; }
                         body { 
                             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-                            line-height: 1.6;
+                            line-height: 1.5;
                             color: #1a1a1a;
                             background-color: #f5f5f5;
-                            padding: 20px;
+                            padding: 10px;
                         }
-                        .email-wrapper { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+                        .email-wrapper { max-width: 550px; margin: 0 auto; background-color: #ffffff; }
                         .logo-container { 
                             background-color: #ffffff;
-                            padding: 40px 20px;
+                            padding: 25px 15px;
                             text-align: center;
                             border-bottom: 1px solid #e5e5e5;
                         }
-                        .logo { max-width: 200px; height: auto; }
+                        .logo { max-width: 220px; height: auto; }
                         .header { 
                             background-color: #1a1a1a;
                             color: #ffffff;
-                            padding: 40px 30px;
+                            padding: 25px 20px;
                             text-align: center;
                         }
                         .header h1 { 
-                            font-size: 28px;
+                            font-size: 24px;
                             font-weight: 600;
                             margin: 0;
                             letter-spacing: -0.5px;
                         }
                         .content { 
                             background-color: #ffffff;
-                            padding: 40px 30px;
+                            padding: 25px 20px;
                             color: #1a1a1a;
                         }
                         .content h2 {
-                            font-size: 22px;
+                            font-size: 18px;
                             font-weight: 600;
-                            margin-bottom: 20px;
+                            margin-bottom: 12px;
                             color: #1a1a1a;
                         }
                         .content p {
-                            margin-bottom: 16px;
-                            font-size: 15px;
+                            margin-bottom: 12px;
+                            font-size: 14px;
                             color: #4a4a4a;
                         }
                         .codigo { 
                             background: linear-gradient(135deg, #f8f8f8 0%%, #ffffff 100%%);
                             border: 2px solid #1a1a1a;
-                            border-radius: 8px;
-                            padding: 30px 20px;
+                            border-radius: 6px;
+                            padding: 20px 15px;
                             text-align: center;
-                            margin: 30px 0;
+                            margin: 20px 0;
                         }
                         .codigo-label {
-                            font-size: 13px;
+                            font-size: 11px;
                             color: #6a6a6a;
-                            margin-bottom: 15px;
+                            margin-bottom: 10px;
                             text-transform: uppercase;
                             letter-spacing: 1px;
                             font-weight: 600;
                         }
                         .codigo-numero { 
-                            font-size: 42px;
+                            font-size: 32px;
                             font-weight: 700;
                             color: #1a1a1a;
-                            letter-spacing: 12px;
+                            letter-spacing: 8px;
                             font-family: 'Courier New', monospace;
-                            margin: 10px 0;
+                            margin: 8px 0;
                         }
                         .alert { 
                             background-color: #f8f8f8;
                             border-left: 4px solid #1a1a1a;
-                            padding: 16px 20px;
-                            margin: 25px 0;
+                            padding: 12px 15px;
+                            margin: 15px 0;
                             border-radius: 4px;
+                            font-size: 13px;
                         }
                         .alert strong {
                             color: #1a1a1a;
-                            display: block;
-                            margin-bottom: 4px;
                         }
                         .footer { 
                             background-color: #f8f8f8;
-                            padding: 30px;
+                            padding: 20px;
                             text-align: center;
                             border-top: 1px solid #e5e5e5;
                         }
                         .footer p {
-                            font-size: 13px;
+                            font-size: 12px;
                             color: #6a6a6a;
-                            margin: 8px 0;
+                            margin: 6px 0;
                         }
                         .divider {
                             height: 1px;
                             background-color: #e5e5e5;
-                            margin: 30px 0;
+                            margin: 20px 0;
                         }
                     </style>
                 </head>
                 <body>
                     <div class="email-wrapper">
                         <div class="logo-container">
-                            <img src="https://github.com/SaraahBR/Luigarah/blob/main/public/logos/LUIGARA-LOGO.png?raw=true" alt="Luigarah" class="logo" style="max-width: 350px; width: 100%%; height: auto;">
+                            <img src="https://github.com/SaraahBR/Luigarah/blob/main/public/logos/LUIGARA-LOGO.png?raw=true" alt="Luigarah" class="logo" style="max-width: 220px; width: 100%%; height: auto;">
                         </div>
                         <div class="header">
-                            <h1 style="font-family: 'Playfair Display', 'Times New Roman', serif; font-size: 36px; font-weight: bold; letter-spacing: 0.15em; margin: 0;">LUIGARAH</h1>
+                            <h1 style="font-family: 'Playfair Display', 'Times New Roman', serif; font-size: 24px; font-weight: bold; letter-spacing: 0.15em; margin: 0;">LUIGARAH</h1>
                         </div>
                         <div class="content">
                             <h2>Olá, %s!</h2>
@@ -322,15 +321,14 @@ public class EmailService {
                             </div>
                             
                             <div class="alert">
-                                <strong>⏰ Atenção:</strong>
-                                Este código expira em <strong>12 horas</strong>.
+                                <strong>⏰ Atenção:</strong> Este código expira em <strong>12 horas</strong>.
                             </div>
                             
                             <div class="divider"></div>
                             
                             <p>Se você não solicitou este código, por favor ignore este email.</p>
                             <p>Estamos quase lá! Após a verificação, você terá acesso completo à plataforma.</p>
-                            <p style="margin-top: 30px; color: #1a1a1a;"><strong>Equipe Luigarah</strong></p>
+                            <p style="margin-top: 20px; color: #1a1a1a;"><strong>Equipe Luigarah</strong></p>
                         </div>
                         <div class="footer">
                             <p>© 2025 Luigarah. Todos os direitos reservados.</p>
@@ -480,10 +478,10 @@ public class EmailService {
                 <body>
                     <div class="email-wrapper">
                         <div class="logo-container">
-                            <img src="https://github.com/SaraahBR/Luigarah/blob/main/public/logos/LUIGARA-LOGO.png?raw=true" alt="Luigarah" class="logo" style="max-width: 350px; width: 100%%; height: auto;">
+                            <img src="https://github.com/SaraahBR/Luigarah/blob/main/public/logos/LUIGARA-LOGO.png?raw=true" alt="Luigarah" class="logo" style="max-width: 220px; width: 100%%; height: auto;">
                         </div>
                         <div class="header">
-                            <h1 style="font-family: 'Playfair Display', 'Times New Roman', serif; font-size: 36px; font-weight: bold; letter-spacing: 0.15em; margin: 0;">LUIGARAH</h1>
+                            <h1 style="font-family: 'Playfair Display', 'Times New Roman', serif; font-size: 24px; font-weight: bold; letter-spacing: 0.15em; margin: 0;">LUIGARAH</h1>
                         </div>
                         <div class="content">
                             <h2>Olá, %s!</h2>
@@ -501,14 +499,13 @@ public class EmailService {
                             </div>
                             
                             <div class="security-alert">
-                                <strong>🔒 Segurança:</strong>
-                                Se você não solicitou a redefinição de senha, <strong>ignore este email</strong> e sua senha permanecerá inalterada.
+                                <strong>🔒 Segurança:</strong> Se você não solicitou a redefinição de senha, <strong>ignore este email</strong> e sua senha permanecerá inalterada.
                             </div>
                             
                             <div class="divider"></div>
                             
                             <p>Por questões de segurança, recomendamos que você escolha uma senha forte.</p>
-                            <p style="margin-top: 30px; color: #1a1a1a;"><strong>Equipe Luigarah</strong></p>
+                            <p style="margin-top: 20px; color: #1a1a1a;"><strong>Equipe Luigarah</strong></p>
                         </div>
                         <div class="footer">
                             <p>© 2025 Luigarah. Todos os direitos reservados.</p>
