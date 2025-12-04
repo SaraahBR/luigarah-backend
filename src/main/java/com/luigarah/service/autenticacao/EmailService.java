@@ -51,24 +51,109 @@ public class EmailService {
                 <head>
                     <meta charset="UTF-8">
                     <style>
-                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                        .header { background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-                        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-                        .button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-                        .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { 
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                            line-height: 1.6;
+                            color: #1a1a1a;
+                            background-color: #f5f5f5;
+                            padding: 20px;
+                        }
+                        .email-wrapper { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+                        .logo-container { 
+                            background-color: #ffffff;
+                            padding: 40px 20px;
+                            text-align: center;
+                            border-bottom: 1px solid #e5e5e5;
+                        }
+                        .logo { max-width: 200px; height: auto; }
+                        .header { 
+                            background-color: #1a1a1a;
+                            color: #ffffff;
+                            padding: 40px 30px;
+                            text-align: center;
+                        }
+                        .header h1 { 
+                            font-size: 28px;
+                            font-weight: 600;
+                            margin: 0;
+                            letter-spacing: -0.5px;
+                        }
+                        .content { 
+                            background-color: #ffffff;
+                            padding: 40px 30px;
+                            color: #1a1a1a;
+                        }
+                        .content h2 {
+                            font-size: 22px;
+                            font-weight: 600;
+                            margin-bottom: 20px;
+                            color: #1a1a1a;
+                        }
+                        .content p {
+                            margin-bottom: 16px;
+                            font-size: 15px;
+                            color: #4a4a4a;
+                        }
+                        .content ul {
+                            list-style: none;
+                            padding: 20px 0;
+                            margin: 20px 0;
+                        }
+                        .content ul li {
+                            padding: 12px 0;
+                            font-size: 15px;
+                            color: #4a4a4a;
+                            border-bottom: 1px solid #f0f0f0;
+                        }
+                        .content ul li:last-child { border-bottom: none; }
+                        .button-container { text-align: center; margin: 30px 0; }
+                        .button { 
+                            display: inline-block;
+                            background-color: #1a1a1a;
+                            color: #ffffff !important;
+                            padding: 16px 40px;
+                            text-decoration: none;
+                            border-radius: 4px;
+                            font-size: 15px;
+                            font-weight: 600;
+                            transition: background-color 0.3s;
+                        }
+                        .button:hover { background-color: #333333; }
+                        .footer { 
+                            background-color: #f8f8f8;
+                            padding: 30px;
+                            text-align: center;
+                            border-top: 1px solid #e5e5e5;
+                        }
+                        .footer p {
+                            font-size: 13px;
+                            color: #6a6a6a;
+                            margin: 8px 0;
+                        }
+                        .divider {
+                            height: 1px;
+                            background-color: #e5e5e5;
+                            margin: 30px 0;
+                        }
                     </style>
                 </head>
                 <body>
-                    <div class="container">
+                    <div class="email-wrapper">
+                        <div class="logo-container">
+                            <img src="https://raw.githubusercontent.com/SaraahBR/Luigarah/main/public/logos/LH_FUNDO_BRANCO.png" alt="Luigarah" class="logo">
+                        </div>
                         <div class="header">
-                            <h1>🎉 Bem-vindo(a) ao Luigarah!</h1>
+                            <h1>Bem-vindo(a) ao Luigarah! 🎉</h1>
                         </div>
                         <div class="content">
                             <h2>Olá, %s!</h2>
-                            <p>É um prazer tê-lo(a) conosco! 🎊</p>
+                            <p>É um prazer tê-lo(a) conosco!</p>
                             <p>Obrigado por %s no <strong>Luigarah</strong> - sua nova plataforma de moda e estilo!</p>
                             <p>Estamos animados para você explorar nossas coleções exclusivas e encontrar peças perfeitas para você.</p>
+                            
+                            <div class="divider"></div>
+                            
                             <p><strong>O que você pode fazer agora:</strong></p>
                             <ul>
                                 <li>🛍️ Explorar nossos produtos</li>
@@ -76,12 +161,15 @@ public class EmailService {
                                 <li>🛒 Fazer seu primeiro pedido</li>
                                 <li>👤 Personalizar seu perfil</li>
                             </ul>
-                            <center>
+                            
+                            <div class="button-container">
                                 <a href="%s" class="button">Começar a Comprar</a>
-                            </center>
+                            </div>
+                            
+                            <div class="divider"></div>
+                            
                             <p>Se precisar de ajuda, nossa equipe está sempre disponível para você!</p>
-                            <p>Boas compras! ✨</p>
-                            <p><strong>Equipe Luigarah</strong></p>
+                            <p style="margin-top: 30px; color: #1a1a1a;"><strong>Equipe Luigarah</strong></p>
                         </div>
                         <div class="footer">
                             <p>© 2025 Luigarah. Todos os direitos reservados.</p>
@@ -115,19 +203,111 @@ public class EmailService {
                 <html>
                 <head>
                     <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <style>
-                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                        .header { background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-                        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-                        .codigo { background: white; border: 2px dashed #667eea; border-radius: 10px; padding: 20px; text-align: center; margin: 20px 0; }
-                        .codigo-numero { font-size: 36px; font-weight: bold; color: #667eea; letter-spacing: 8px; }
-                        .alert { background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin: 20px 0; }
-                        .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { 
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                            line-height: 1.6;
+                            color: #1a1a1a;
+                            background-color: #f5f5f5;
+                            padding: 20px;
+                        }
+                        .email-wrapper { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+                        .logo-container { 
+                            background-color: #ffffff;
+                            padding: 40px 20px;
+                            text-align: center;
+                            border-bottom: 1px solid #e5e5e5;
+                        }
+                        .logo { max-width: 200px; height: auto; }
+                        .header { 
+                            background-color: #1a1a1a;
+                            color: #ffffff;
+                            padding: 40px 30px;
+                            text-align: center;
+                        }
+                        .header h1 { 
+                            font-size: 28px;
+                            font-weight: 600;
+                            margin: 0;
+                            letter-spacing: -0.5px;
+                        }
+                        .content { 
+                            background-color: #ffffff;
+                            padding: 40px 30px;
+                            color: #1a1a1a;
+                        }
+                        .content h2 {
+                            font-size: 22px;
+                            font-weight: 600;
+                            margin-bottom: 20px;
+                            color: #1a1a1a;
+                        }
+                        .content p {
+                            margin-bottom: 16px;
+                            font-size: 15px;
+                            color: #4a4a4a;
+                        }
+                        .codigo { 
+                            background: linear-gradient(135deg, #f8f8f8 0%%, #ffffff 100%%);
+                            border: 2px solid #1a1a1a;
+                            border-radius: 8px;
+                            padding: 30px 20px;
+                            text-align: center;
+                            margin: 30px 0;
+                        }
+                        .codigo-label {
+                            font-size: 13px;
+                            color: #6a6a6a;
+                            margin-bottom: 15px;
+                            text-transform: uppercase;
+                            letter-spacing: 1px;
+                            font-weight: 600;
+                        }
+                        .codigo-numero { 
+                            font-size: 42px;
+                            font-weight: 700;
+                            color: #1a1a1a;
+                            letter-spacing: 12px;
+                            font-family: 'Courier New', monospace;
+                            margin: 10px 0;
+                        }
+                        .alert { 
+                            background-color: #f8f8f8;
+                            border-left: 4px solid #1a1a1a;
+                            padding: 16px 20px;
+                            margin: 25px 0;
+                            border-radius: 4px;
+                        }
+                        .alert strong {
+                            color: #1a1a1a;
+                            display: block;
+                            margin-bottom: 4px;
+                        }
+                        .footer { 
+                            background-color: #f8f8f8;
+                            padding: 30px;
+                            text-align: center;
+                            border-top: 1px solid #e5e5e5;
+                        }
+                        .footer p {
+                            font-size: 13px;
+                            color: #6a6a6a;
+                            margin: 8px 0;
+                        }
+                        .divider {
+                            height: 1px;
+                            background-color: #e5e5e5;
+                            margin: 30px 0;
+                        }
                     </style>
                 </head>
                 <body>
-                    <div class="container">
+                    <div class="email-wrapper">
+                        <div class="logo-container">
+                            <img src="https://raw.githubusercontent.com/SaraahBR/Luigarah/main/public/logos/LH_FUNDO_BRANCO.png" alt="Luigarah" class="logo">
+                        </div>
                         <div class="header">
                             <h1>🔐 Verificação de Conta</h1>
                         </div>
@@ -135,16 +315,22 @@ public class EmailService {
                             <h2>Olá, %s!</h2>
                             <p>Você solicitou a verificação da sua conta no <strong>Luigarah</strong>.</p>
                             <p>Use o código abaixo para confirmar sua conta:</p>
+                            
                             <div class="codigo">
-                                <p style="margin: 0; color: #666; font-size: 14px;">Seu código de verificação é:</p>
+                                <div class="codigo-label">Seu código de verificação é:</div>
                                 <div class="codigo-numero">%s</div>
                             </div>
+                            
                             <div class="alert">
-                                <strong>⏰ Atenção:</strong> Este código expira em <strong>12 horas</strong>.
+                                <strong>⏰ Atenção:</strong>
+                                Este código expira em <strong>12 horas</strong>.
                             </div>
+                            
+                            <div class="divider"></div>
+                            
                             <p>Se você não solicitou este código, por favor ignore este email.</p>
                             <p>Estamos quase lá! Após a verificação, você terá acesso completo à plataforma. 🎉</p>
-                            <p><strong>Equipe Luigarah</strong></p>
+                            <p style="margin-top: 30px; color: #1a1a1a;"><strong>Equipe Luigarah</strong></p>
                         </div>
                         <div class="footer">
                             <p>© 2025 Luigarah. Todos os direitos reservados.</p>
@@ -178,19 +364,125 @@ public class EmailService {
                 <html>
                 <head>
                     <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <style>
-                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                        .header { background: linear-gradient(135deg, #f093fb 0%%, #f5576c 100%%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-                        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-                        .codigo { background: white; border: 2px dashed #f5576c; border-radius: 10px; padding: 20px; text-align: center; margin: 20px 0; }
-                        .codigo-numero { font-size: 36px; font-weight: bold; color: #f5576c; letter-spacing: 8px; }
-                        .alert { background: #f8d7da; border-left: 4px solid #dc3545; padding: 12px; margin: 20px 0; }
-                        .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { 
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                            line-height: 1.6;
+                            color: #1a1a1a;
+                            background-color: #f5f5f5;
+                            padding: 20px;
+                        }
+                        .email-wrapper { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+                        .logo-container { 
+                            background-color: #ffffff;
+                            padding: 40px 20px;
+                            text-align: center;
+                            border-bottom: 1px solid #e5e5e5;
+                        }
+                        .logo { max-width: 200px; height: auto; }
+                        .header { 
+                            background-color: #1a1a1a;
+                            color: #ffffff;
+                            padding: 40px 30px;
+                            text-align: center;
+                        }
+                        .header h1 { 
+                            font-size: 28px;
+                            font-weight: 600;
+                            margin: 0;
+                            letter-spacing: -0.5px;
+                        }
+                        .content { 
+                            background-color: #ffffff;
+                            padding: 40px 30px;
+                            color: #1a1a1a;
+                        }
+                        .content h2 {
+                            font-size: 22px;
+                            font-weight: 600;
+                            margin-bottom: 20px;
+                            color: #1a1a1a;
+                        }
+                        .content p {
+                            margin-bottom: 16px;
+                            font-size: 15px;
+                            color: #4a4a4a;
+                        }
+                        .codigo { 
+                            background: linear-gradient(135deg, #f8f8f8 0%%, #ffffff 100%%);
+                            border: 2px solid #1a1a1a;
+                            border-radius: 8px;
+                            padding: 30px 20px;
+                            text-align: center;
+                            margin: 30px 0;
+                        }
+                        .codigo-label {
+                            font-size: 13px;
+                            color: #6a6a6a;
+                            margin-bottom: 15px;
+                            text-transform: uppercase;
+                            letter-spacing: 1px;
+                            font-weight: 600;
+                        }
+                        .codigo-numero { 
+                            font-size: 42px;
+                            font-weight: 700;
+                            color: #1a1a1a;
+                            letter-spacing: 12px;
+                            font-family: 'Courier New', monospace;
+                            margin: 10px 0;
+                        }
+                        .alert { 
+                            background-color: #f8f8f8;
+                            border-left: 4px solid #1a1a1a;
+                            padding: 16px 20px;
+                            margin: 25px 0;
+                            border-radius: 4px;
+                        }
+                        .alert strong {
+                            color: #1a1a1a;
+                            display: block;
+                            margin-bottom: 4px;
+                        }
+                        .security-alert {
+                            background-color: #1a1a1a;
+                            color: #ffffff;
+                            border-left: 4px solid #666666;
+                            padding: 16px 20px;
+                            margin: 25px 0;
+                            border-radius: 4px;
+                        }
+                        .security-alert strong {
+                            color: #ffffff;
+                            display: block;
+                            margin-bottom: 4px;
+                        }
+                        .footer { 
+                            background-color: #f8f8f8;
+                            padding: 30px;
+                            text-align: center;
+                            border-top: 1px solid #e5e5e5;
+                        }
+                        .footer p {
+                            font-size: 13px;
+                            color: #6a6a6a;
+                            margin: 8px 0;
+                        }
+                        .divider {
+                            height: 1px;
+                            background-color: #e5e5e5;
+                            margin: 30px 0;
+                        }
                     </style>
                 </head>
                 <body>
-                    <div class="container">
+                    <div class="email-wrapper">
+                        <div class="logo-container">
+                            <img src="https://raw.githubusercontent.com/SaraahBR/Luigarah/main/public/logos/LH_FUNDO_BRANCO.png" alt="Luigarah" class="logo">
+                            <h1 style="font-family: 'Playfair Display', 'Times New Roman', serif; font-size: 36px; font-weight: bold; letter-spacing: 0.15em; color: #1a1a1a; margin: 20px 0 0 0;">LUIGARAH</h1>
+                        </div>
                         <div class="header">
                             <h1>🔑 Redefinição de Senha</h1>
                         </div>
@@ -198,18 +490,26 @@ public class EmailService {
                             <h2>Olá, %s!</h2>
                             <p>Você solicitou a redefinição de senha da sua conta no <strong>Luigarah</strong>.</p>
                             <p>Use o código abaixo para criar uma nova senha:</p>
+                            
                             <div class="codigo">
-                                <p style="margin: 0; color: #666; font-size: 14px;">Seu código de redefinição é:</p>
+                                <div class="codigo-label">Seu código de redefinição é:</div>
                                 <div class="codigo-numero">%s</div>
                             </div>
+                            
                             <div class="alert">
-                                <strong>⏰ Atenção:</strong> Este código expira em <strong>12 horas</strong>.
+                                <strong>⏰ Atenção:</strong>
+                                Este código expira em <strong>12 horas</strong>.
                             </div>
-                            <div class="alert">
-                                <strong>🔒 Segurança:</strong> Se você não solicitou a redefinição de senha, <strong>ignore este email</strong> e sua senha permanecerá inalterada.
+                            
+                            <div class="security-alert">
+                                <strong>🔒 Segurança:</strong>
+                                Se você não solicitou a redefinição de senha, <strong>ignore este email</strong> e sua senha permanecerá inalterada.
                             </div>
+                            
+                            <div class="divider"></div>
+                            
                             <p>Por questões de segurança, recomendamos que você escolha uma senha forte.</p>
-                            <p><strong>Equipe Luigarah</strong></p>
+                            <p style="margin-top: 30px; color: #1a1a1a;"><strong>Equipe Luigarah</strong></p>
                         </div>
                         <div class="footer">
                             <p>© 2025 Luigarah. Todos os direitos reservados.</p>
