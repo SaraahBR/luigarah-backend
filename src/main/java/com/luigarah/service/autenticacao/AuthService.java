@@ -843,8 +843,8 @@ public class AuthService {
             throw new SenhaInvalidaException("A senha deve conter pelo menos um número");
         }
 
-        if (!senha.matches(".*[!@#$%^&*(),.?\":{}|<>].*")) {
-            throw new SenhaInvalidaException("A senha deve conter pelo menos um caractere especial (!@#$%^&*(),.?\":{}|<>)");
+        if (!senha.matches(".*[!@#$%^&*(),.?\":{}|<>.\\-_+=\\[\\]';/~`].*")) {
+            throw new SenhaInvalidaException("A senha deve conter pelo menos um caractere especial (!@#$%^&*(),.?\":{}|<>.-_+=[]';/~`)");
         }
     }
 
