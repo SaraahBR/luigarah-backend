@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "########################################"
-echo "[DEBUG] ENTRYPOINT VERSION FINAL 4.0"
+echo "[DEBUG] ENTRYPOINT VERSION FINAL 5.0"
 echo "########################################"
 
 echo "[entrypoint] iniciando..."
@@ -72,8 +72,6 @@ fi
 export TNS_ADMIN="${TNS_ADMIN:-$WALLET_DIR}"
 export PORT="${PORT:-8080}"
 
-TRUSTSTORE_PASSWORD_SAFE=$(printf "%s" "${TRUSTSTORE_PASSWORD:-}")
-
 echo "[entrypoint] TNS_ADMIN=${TNS_ADMIN}"
 echo "[entrypoint] PORT=${PORT}"
 
@@ -84,37 +82,19 @@ echo "[entrypoint] Conteúdo do wallet:"
 ls -la "$WALLET_DIR" || true
 
 # ===============================
-# Validação do truststore
+# Verificação mínima (essencial)
 # ===============================
-if [ ! -f "${WALLET_DIR}/truststore.jks" ]; then
-  echo "[entrypoint] ERRO: truststore.jks não encontrado"
+if [ ! -f "${WALLET_DIR}/tnsnames.ora" ]; then
+  echo "[entrypoint] ERRO: tnsnames.ora não encontrado (wallet inválido)"
   exit 1
 fi
 
-if [ -z "${TRUSTSTORE_PASSWORD_SAFE}" ]; then
-  echo "[entrypoint] ERRO: TRUSTSTORE_PASSWORD não definida"
+if [ ! -f "${WALLET_DIR}/sqlnet.ora" ]; then
+  echo "[entrypoint] ERRO: sqlnet.ora não encontrado (wallet inválido)"
   exit 1
 fi
 
-echo "[entrypoint] Validando truststore..."
-
-if keytool -list \
-  -keystore "${WALLET_DIR}/truststore.jks" \
-  -storetype JKS \
-  -storepass "${TRUSTSTORE_PASSWORD_SAFE}" \
-  > /dev/null 2>&1; then
-
-  echo "[entrypoint] truststore OK ✔"
-
-else
-  echo "[entrypoint] ERRO: truststore inválido ou senha incorreta"
-
-  echo "[DEBUG] Senha recebida (RAW): ${TRUSTSTORE_PASSWORD}"
-  echo "[DEBUG] Senha sanitizada: ${TRUSTSTORE_PASSWORD_SAFE}"
-  echo "[DEBUG] Tamanho da senha: ${#TRUSTSTORE_PASSWORD_SAFE}"
-
-  exit 1
-fi
+echo "[entrypoint] Wallet válido ✔"
 
 # ===============================
 # DEBUG COMPLETO
@@ -123,19 +103,12 @@ if [ "${DEBUG_SSL:-false}" = "true" ]; then
   echo "================ DEBUG SSL ================="
 
   echo "[DEBUG] TNS_ADMIN=${TNS_ADMIN}"
-  echo "[DEBUG] TRUSTSTORE_PASSWORD=${TRUSTSTORE_PASSWORD_SAFE}"
 
   echo "[DEBUG] Arquivos no wallet:"
   ls -la "${TNS_ADMIN}"
 
   echo "[DEBUG] Conteúdo do tnsnames.ora:"
   cat "${TNS_ADMIN}/tnsnames.ora" || true
-
-  echo "[DEBUG] Dump truststore:"
-  keytool -list \
-    -keystore "${TNS_ADMIN}/truststore.jks" \
-    -storetype JKS \
-    -storepass "${TRUSTSTORE_PASSWORD_SAFE}" || true
 
   echo "==========================================="
 fi
@@ -149,8 +122,5 @@ exec java \
   -XX:+ExitOnOutOfMemoryError \
   -Dserver.port="${PORT}" \
   -Doracle.net.tns_admin="${TNS_ADMIN}" \
-  -Djavax.net.ssl.trustStore="${TNS_ADMIN}/truststore.jks" \
-  -Djavax.net.ssl.trustStorePassword="${TRUSTSTORE_PASSWORD_SAFE}" \
-  -Djavax.net.ssl.trustStoreType=JKS \
   ${DEBUG_SSL:+-Djavax.net.debug=ssl,handshake} \
   -jar /opt/app/app.jar
