@@ -7,7 +7,7 @@ echo "[entrypoint] iniciando..."
 WALLET_DIR="/opt/app/wallet"
 mkdir -p "$WALLET_DIR"
 
-# 1) Preferir secret em Base64 (variável ORACLE_WALLET_ZIP_B64)
+# 1) Preferir secret em Base64 (Render)
 if [ "${ORACLE_WALLET_ZIP_B64:-}" != "" ]; then
   echo "[entrypoint] Detectei ORACLE_WALLET_ZIP_B64; decodificando ZIP..."
   echo -n "$ORACLE_WALLET_ZIP_B64" | base64 -d > /tmp/wallet.zip
@@ -39,27 +39,35 @@ if [ -n "${inner_dir}" ] && [ -f "${inner_dir}/tnsnames.ora" ]; then
   shopt -u dotglob nullglob
 fi
 
-# Exporta TNS_ADMIN
+# Exporta variáveis
 export TNS_ADMIN="${TNS_ADMIN:-$WALLET_DIR}"
-echo "[entrypoint] TNS_ADMIN=${TNS_ADMIN}"
-
-# Porta
 export PORT="${PORT:-8080}"
+
+echo "[entrypoint] TNS_ADMIN=${TNS_ADMIN}"
 echo "[entrypoint] PORT=${PORT}"
 
 # Debug do wallet
 echo "[entrypoint] Conteúdo do wallet:"
 ls -la "$WALLET_DIR" || true
 
-# Validação do truststore (CRÍTICO)
+# Validação REAL do truststore
 if [ -f "${WALLET_DIR}/truststore.jks" ]; then
   echo "[entrypoint] Validando truststore..."
-  keytool -list -keystore "${WALLET_DIR}/truststore.jks" -storepass changeit > /dev/null 2>&1 \
-    && echo "[entrypoint] truststore OK" \
-    || echo "[entrypoint] ERRO: truststore inválido ou corrompido"
+
+  if [ -z "${TRUSTSTORE_PASSWORD:-}" ]; then
+    echo "[entrypoint] ERRO: TRUSTSTORE_PASSWORD não definida"
+  else
+    keytool -list -keystore "${WALLET_DIR}/truststore.jks" -storepass "${TRUSTSTORE_PASSWORD}" > /dev/null 2>&1 \
+      && echo "[entrypoint] truststore OK" \
+      || echo "[entrypoint] ERRO: truststore inválido ou senha incorreta"
+  fi
 else
   echo "[entrypoint] ERRO: truststore.jks não encontrado"
 fi
+
+# Debug das configs SSL (ESSENCIAL)
+echo "[entrypoint] TRUSTSTORE=${TNS_ADMIN}/truststore.jks"
+echo "[entrypoint] TRUSTSTORE_PASSWORD=${TRUSTSTORE_PASSWORD:-NÃO DEFINIDA}"
 
 echo "[entrypoint] iniciando Java..."
 
