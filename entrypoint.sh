@@ -59,4 +59,10 @@ else
 fi
 
 echo "[entrypoint] iniciando Java..."
-exec java -XX:+ExitOnOutOfMemoryError -Dserver.port="${PORT}" -jar /opt/app/app.jar
+exec java \
+  -XX:+ExitOnOutOfMemoryError \
+  -Dserver.port="${PORT}" \
+  -Doracle.net.tns_admin="${TNS_ADMIN}" \
+  -Djavax.net.ssl.trustStore="${TNS_ADMIN}/truststore.jks" \
+  -Djavax.net.ssl.trustStorePassword=changeit \
+  -jar /opt/app/app.jar
