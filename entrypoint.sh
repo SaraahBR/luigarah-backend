@@ -3,72 +3,113 @@ set -euo pipefail
 
 echo "[entrypoint] iniciando..."
 
-# Destino do wallet
+# ===============================
+# Configuração inicial
+# ===============================
 WALLET_DIR="/opt/app/wallet"
 mkdir -p "$WALLET_DIR"
 
-# 1) Preferir secret em Base64 (Render)
+# ===============================
+# 1) Wallet via Base64 (Render)
+# ===============================
 if [ "${ORACLE_WALLET_ZIP_B64:-}" != "" ]; then
-  echo "[entrypoint] Detectei ORACLE_WALLET_ZIP_B64; decodificando ZIP..."
-  echo -n "$ORACLE_WALLET_ZIP_B64" | base64 -d > /tmp/wallet.zip
+  echo "[entrypoint] Detectei ORACLE_WALLET_ZIP_B64; decodificando..."
+  printf "%s" "$ORACLE_WALLET_ZIP_B64" | base64 -d > /tmp/wallet.zip
   rm -rf "${WALLET_DIR:?}/"*
   unzip -oq /tmp/wallet.zip -d "$WALLET_DIR"
   rm -f /tmp/wallet.zip
 else
-  # 2) Fallback: Secret File
+  # ===============================
+  # 2) Fallback local
+  # ===============================
   WALLET_SRC=""
   if [ -f "/etc/secrets/wallet.zip" ]; then WALLET_SRC="/etc/secrets/wallet.zip"; fi
   if [ -z "${WALLET_SRC}" ] && [ -f "/secrets/wallet.zip" ]; then WALLET_SRC="/secrets/wallet.zip"; fi
 
   if [ -n "${WALLET_SRC}" ]; then
-    echo "[entrypoint] Encontrado wallet em ${WALLET_SRC}, descompactando..."
+    echo "[entrypoint] Extraindo wallet de ${WALLET_SRC}..."
     rm -rf "${WALLET_DIR:?}/"*
     unzip -oq "${WALLET_SRC}" -d "$WALLET_DIR"
   else
     echo "[entrypoint] ERRO: Nenhum wallet encontrado"
+    exit 1
   fi
 fi
 
-# Ajuste caso venha com pasta interna
+# ===============================
+# Ajuste de estrutura (pasta interna)
+# ===============================
 inner_dir=$(find "$WALLET_DIR" -mindepth 1 -maxdepth 1 -type d | head -n1 || true)
 if [ -n "${inner_dir}" ] && [ -f "${inner_dir}/tnsnames.ora" ]; then
-  echo "[entrypoint] Pasta interna detectada (${inner_dir}), ajustando..."
+  echo "[entrypoint] Ajustando estrutura do wallet..."
   shopt -s dotglob nullglob
   mv "${inner_dir}/"* "$WALLET_DIR"/ || true
   rmdir "${inner_dir}" || true
   shopt -u dotglob nullglob
 fi
 
-# Exporta variáveis
+# ===============================
+# Variáveis
+# ===============================
 export TNS_ADMIN="${TNS_ADMIN:-$WALLET_DIR}"
 export PORT="${PORT:-8080}"
 
 echo "[entrypoint] TNS_ADMIN=${TNS_ADMIN}"
 echo "[entrypoint] PORT=${PORT}"
 
-# Debug do wallet
+# ===============================
+# Debug básico
+# ===============================
 echo "[entrypoint] Conteúdo do wallet:"
 ls -la "$WALLET_DIR" || true
 
-# Validação REAL do truststore
-if [ -f "${WALLET_DIR}/truststore.jks" ]; then
-  echo "[entrypoint] Validando truststore..."
-
-  if [ -z "${TRUSTSTORE_PASSWORD:-}" ]; then
-    echo "[entrypoint] ERRO: TRUSTSTORE_PASSWORD não definida"
-  else
-    keytool -list -keystore "${WALLET_DIR}/truststore.jks" -storepass "${TRUSTSTORE_PASSWORD}" > /dev/null 2>&1 \
-      && echo "[entrypoint] truststore OK" \
-      || echo "[entrypoint] ERRO: truststore inválido ou senha incorreta"
-  fi
-else
+# ===============================
+# Validação do truststore (FATAL)
+# ===============================
+if [ ! -f "${WALLET_DIR}/truststore.jks" ]; then
   echo "[entrypoint] ERRO: truststore.jks não encontrado"
+  exit 1
 fi
 
-# Debug das configs SSL (ESSENCIAL)
-echo "[entrypoint] TRUSTSTORE=${TNS_ADMIN}/truststore.jks"
-echo "[entrypoint] TRUSTSTORE_PASSWORD=${TRUSTSTORE_PASSWORD:-NÃO DEFINIDA}"
+if [ -z "${TRUSTSTORE_PASSWORD:-}" ]; then
+  echo "[entrypoint] ERRO: TRUSTSTORE_PASSWORD não definida"
+  exit 1
+fi
 
+echo "[entrypoint] Validando truststore..."
+
+keytool -list \
+  -keystore "${WALLET_DIR}/truststore.jks" \
+  -storepass "${TRUSTSTORE_PASSWORD}" \
+  > /dev/null 2>&1 \
+  || { echo "[entrypoint] ERRO: truststore inválido ou senha incorreta"; exit 1; }
+
+echo "[entrypoint] truststore OK ✔"
+
+# ===============================
+# DEBUG COMPLETO (OPCIONAL)
+# ===============================
+if [ "${DEBUG_SSL:-false}" = "true" ]; then
+  echo "================ DEBUG SSL ================="
+  echo "[DEBUG] TNS_ADMIN=${TNS_ADMIN}"
+  echo "[DEBUG] TRUSTSTORE_PASSWORD=${TRUSTSTORE_PASSWORD}"
+  echo "[DEBUG] Arquivos no wallet:"
+  ls -la "${TNS_ADMIN}"
+
+  echo "[DEBUG] Conteúdo do tnsnames.ora:"
+  cat "${TNS_ADMIN}/tnsnames.ora" || true
+
+  echo "[DEBUG] Dump truststore:"
+  keytool -list \
+    -keystore "${TNS_ADMIN}/truststore.jks" \
+    -storepass "${TRUSTSTORE_PASSWORD}" || true
+
+  echo "==========================================="
+fi
+
+# ===============================
+# Inicialização do Java
+# ===============================
 echo "[entrypoint] iniciando Java..."
 
 exec java \
@@ -77,4 +118,5 @@ exec java \
   -Doracle.net.tns_admin="${TNS_ADMIN}" \
   -Djavax.net.ssl.trustStore="${TNS_ADMIN}/truststore.jks" \
   -Djavax.net.ssl.trustStorePassword="${TRUSTSTORE_PASSWORD}" \
+  ${DEBUG_SSL:+-Djavax.net.debug=ssl,handshake} \
   -jar /opt/app/app.jar
