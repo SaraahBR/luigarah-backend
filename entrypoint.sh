@@ -68,5 +68,5 @@ exec java \
   -Dserver.port="${PORT}" \
   -Doracle.net.tns_admin="${TNS_ADMIN}" \
   -Djavax.net.ssl.trustStore="${TNS_ADMIN}/truststore.jks" \
-  -Djavax.net.ssl.trustStorePassword=changeit \
+  -Djavax.net.ssl.trustStorePassword="${TRUSTSTORE_PASSWORD}" \
   -jar /opt/app/app.jar
