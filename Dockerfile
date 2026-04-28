@@ -88,7 +88,7 @@ RUN printf '%s\n' \
 'echo "[entrypoint] iniciando Java..."' \
 '' \
 '# CORREÇÃO CRÍTICA: comando java sem quebra inválida' \
-'exec java -XX:+ExitOnOutOfMemoryError -Dserver.port="${PORT}" -Doracle.net.tns_admin=${TNS_ADMIN} -Djavax.net.ssl.trustStore=${TNS_ADMIN}/truststore.jks -Djavax.net.ssl.trustStorePassword=changeit -jar /opt/app/app.jar' \
+'exec java -XX:+ExitOnOutOfMemoryError -Dserver.port="${PORT}" -Doracle.net.tns_admin=${TNS_ADMIN} -jar /opt/app/app.jar' \
 > /opt/app/entrypoint.sh \
  && chmod +x /opt/app/entrypoint.sh
 
