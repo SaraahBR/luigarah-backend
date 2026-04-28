@@ -13,7 +13,7 @@ RUN mvn -q -e -DskipTests package
 # ===== Runtime =====
 FROM eclipse-temurin:21-jre
 
-# Fuso horário (opcional)
+# Fuso horário
 ENV TZ=America/Sao_Paulo
 
 # Pasta de trabalho
@@ -22,15 +22,17 @@ WORKDIR /opt/app
 # Copia o jar final
 COPY --from=build /app/target/*.jar app.jar
 
-# Ferramentas necessárias
+# Instala unzip e cria diretório do wallet
 RUN mkdir -p /opt/app/wallet \
  && apt-get update && apt-get install -y unzip \
  && rm -rf /var/lib/apt/lists/*
 
 # Script de entrada:
-# - Se ORACLE_WALLET_ZIP_B64 estiver setada, decodifica e descompacta o wallet
-# - (fallback) tenta /etc/secrets/wallet.zip e /secrets/wallet.zip, se existirem
-# - Achata pasta aninhada do wallet, exporta TNS_ADMIN e sobe o app
+# - Decodifica wallet base64 (Render)
+# - Fallback para secrets locais
+# - Ajusta estrutura do wallet
+# - Configura variáveis de ambiente
+# - FORÇA uso do truststore (resolve PKIX)
 RUN printf '%s\n' \
 '#!/usr/bin/env bash' \
 'set -euo pipefail' \
@@ -38,14 +40,14 @@ RUN printf '%s\n' \
 'echo "[entrypoint] iniciando..."' \
 'WALLET_SRC=""' \
 '' \
-'# 1) Preferir variável base64 (segura no Render)' \
+'# 1) Wallet via variável base64' \
 'if [ "${ORACLE_WALLET_ZIP_B64-}" != "" ]; then' \
 '  echo "[entrypoint] Detectei ORACLE_WALLET_ZIP_B64; decodificando ZIP..."' \
 '  printf "%s" "$ORACLE_WALLET_ZIP_B64" | base64 -d > /opt/app/wallet.zip' \
 '  WALLET_SRC="/opt/app/wallet.zip"' \
 'fi' \
 '' \
-'# 2) Fallbacks (úteis em dev/local)' \
+'# 2) Fallbacks (dev/local)' \
 'if [ -z "${WALLET_SRC}" ] && [ -f "/etc/secrets/wallet.zip" ]; then WALLET_SRC="/etc/secrets/wallet.zip"; fi' \
 'if [ -z "${WALLET_SRC}" ] && [ -f "/secrets/wallet.zip" ]; then WALLET_SRC="/secrets/wallet.zip"; fi' \
 '' \
@@ -53,7 +55,8 @@ RUN printf '%s\n' \
 '  echo "[entrypoint] Usando wallet: ${WALLET_SRC} → /opt/app/wallet..."' \
 '  rm -rf /opt/app/wallet/*' \
 '  unzip -oq "${WALLET_SRC}" -d /opt/app/wallet' \
-'  # Se o ZIP tiver pasta raiz, achata para /opt/app/wallet' \
+'' \
+'  # Ajuste caso venha com pasta interna' \
 '  inner_dir=$(find /opt/app/wallet -mindepth 1 -maxdepth 1 -type d | head -n1 || true)' \
 '  if [ -n "${inner_dir}" ] && [ -f "${inner_dir}/tnsnames.ora" ]; then' \
 '    echo "[entrypoint] Pasta interna detectada (${inner_dir}); movendo conteúdo..."' \
@@ -63,30 +66,40 @@ RUN printf '%s\n' \
 '    shopt -u dotglob nullglob' \
 '  fi' \
 'else' \
-'  echo "[entrypoint] Nenhum wallet informado (ok se usar EZCONNECT, mas para TNS é necessário o wallet)."' \
+'  echo "[entrypoint] Nenhum wallet encontrado (ERRO se usar TNS)."' \
 'fi' \
 '' \
+'# Variáveis de ambiente' \
 'export TNS_ADMIN="${TNS_ADMIN:-/opt/app/wallet}"' \
 'export PORT="${PORT:-8080}"' \
 'echo "[entrypoint] TNS_ADMIN=${TNS_ADMIN}"' \
 'echo "[entrypoint] PORT=${PORT}"' \
 '' \
+'# Debug do wallet' \
 'echo "[entrypoint] Conteúdo de /opt/app/wallet:"' \
 'ls -la /opt/app/wallet || true' \
+'' \
 'if [ -f "/opt/app/wallet/tnsnames.ora" ]; then' \
-'  echo "[entrypoint] tnsnames.ora:"' \
-'  sed -e "s/.*/    &/g" /opt/app/wallet/tnsnames.ora || true' \
+'  echo "[entrypoint] tnsnames.ora OK"' \
 'else' \
-'  echo "[entrypoint] tnsnames.ora NÃO encontrado (confira ORACLE_WALLET_ZIP_B64 e o ZIP)."' \
+'  echo "[entrypoint] ERRO: tnsnames.ora não encontrado"' \
 'fi' \
 '' \
 'echo "[entrypoint] iniciando Java..."' \
-'exec java -XX:+ExitOnOutOfMemoryError -Dserver.port="${PORT}" -jar /opt/app/app.jar' \
+'' \
+'# CORREÇÃO CRÍTICA: força uso do truststore do wallet' \
+'exec java \\' \
+' -XX:+ExitOnOutOfMemoryError \\' \
+' -Dserver.port="${PORT}" \\' \
+' -Doracle.net.tns_admin=${TNS_ADMIN} \\' \
+' -Djavax.net.ssl.trustStore=${TNS_ADMIN}/truststore.jks \\' \
+' -Djavax.net.ssl.trustStorePassword=changeit \\' \
+' -jar /opt/app/app.jar' \
 > /opt/app/entrypoint.sh \
  && chmod +x /opt/app/entrypoint.sh
 
-# Porta padrão local (Render ignora EXPOSE e usa a PORT)
+# Porta padrão
 EXPOSE 8080
 
-# Garantir que o script rode sempre
+# EntryPoint
 ENTRYPOINT ["/opt/app/entrypoint.sh"]
