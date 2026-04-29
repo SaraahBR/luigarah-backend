@@ -103,6 +103,18 @@ echo "========== JAVA_OPTS =========="
 echo "$JAVA_OPTS"
 
 # ===============================
+# IMPORT TRUSTSTORE NO JAVA
+# ===============================
+echo "[DEBUG] Importando certificados no cacerts..."
+
+keytool -importkeystore \
+  -srckeystore "$TNS_ADMIN/truststore.jks" \
+  -srcstorepass changeit \
+  -destkeystore "$JAVA_HOME/lib/security/cacerts" \
+  -deststorepass changeit \
+  -noprompt || true
+
+# ===============================
 # START
 # ===============================
 echo "[entrypoint] iniciando Java..."
