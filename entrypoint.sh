@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "########################################"
-echo "[DEBUG] ENTRYPOINT VERSION FINAL"
+echo "[DEBUG] ENTRYPOINT VERSION FINAL LIMPO"
 echo "########################################"
 
 echo "[entrypoint] iniciando..."
@@ -92,7 +92,6 @@ timeout 5 bash -c "</dev/tcp/adb.sa-saopaulo-1.oraclecloud.com/1522" \
 # ===============================
 JAVA_OPTS=""
 
-# Wallet (ESSENCIAL)
 JAVA_OPTS="$JAVA_OPTS -Doracle.net.tns_admin=$TNS_ADMIN"
 JAVA_OPTS="$JAVA_OPTS -Doracle.net.wallet_location=(SOURCE=(METHOD=FILE)(METHOD_DATA=(DIRECTORY=$TNS_ADMIN)))"
 JAVA_OPTS="$JAVA_OPTS -Doracle.net.ssl_server_dn_match=true"
