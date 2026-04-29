@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "########################################"
-echo "[DEBUG] ENTRYPOINT VERSION FINAL 10.1 ORACLE WALLET FIXED"
+echo "[DEBUG] ENTRYPOINT VERSION FINAL 11.0 ORACLE WALLET + TRUSTSTORE FIX"
 echo "########################################"
 
 echo "[entrypoint] iniciando..."
@@ -21,12 +21,7 @@ echo "[DEBUG] WALLET_DIR=${WALLET_DIR}"
 if [ -n "${ORACLE_WALLET_ZIP_B64:-}" ]; then
   echo "[entrypoint] Wallet via BASE64 detectado"
 
-  echo "[DEBUG] Tamanho BASE64: ${#ORACLE_WALLET_ZIP_B64}"
-
   printf "%s" "$ORACLE_WALLET_ZIP_B64" | base64 -d > /tmp/wallet.zip
-
-  echo "[DEBUG] wallet.zip:"
-  ls -lh /tmp/wallet.zip
 
   echo "[DEBUG] Validando ZIP..."
   unzip -t /tmp/wallet.zip || {
@@ -72,7 +67,7 @@ echo "[DEBUG] PORT=${PORT}"
 echo "========== WALLET =========="
 ls -lah "$WALLET_DIR"
 
-for f in tnsnames.ora sqlnet.ora cwallet.sso; do
+for f in tnsnames.ora sqlnet.ora cwallet.sso ewallet.p12; do
   [ -f "$WALLET_DIR/$f" ] || {
     echo "[ERRO FATAL] $f ausente"
     exit 1
@@ -84,20 +79,28 @@ echo "[entrypoint] Wallet válido ✔"
 # ===============================
 # DEBUG REDE
 # ===============================
+echo "========== DNS =========="
 getent hosts adb.sa-saopaulo-1.oraclecloud.com || true
 
+echo "========== PORTA =========="
 timeout 5 bash -c "</dev/tcp/adb.sa-saopaulo-1.oraclecloud.com/1522" \
   && echo "[OK] Porta 1522 acessível" \
   || echo "[WARN] Porta 1522 inacessível"
 
 # ===============================
-# JAVA OPTIONS (FIX REAL)
+# JAVA OPTIONS
 # ===============================
 JAVA_OPTS=""
 
+# Wallet
 JAVA_OPTS="$JAVA_OPTS -Doracle.net.tns_admin=$TNS_ADMIN"
 JAVA_OPTS="$JAVA_OPTS -Doracle.net.wallet_location=(SOURCE=(METHOD=FILE)(METHOD_DATA=(DIRECTORY=$TNS_ADMIN)))"
 JAVA_OPTS="$JAVA_OPTS -Doracle.net.ssl_server_dn_match=true"
+
+# 🔥 TRUSTSTORE
+JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStore=$TNS_ADMIN/ewallet.p12"
+JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStoreType=PKCS12"
+JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStorePassword="
 
 echo "========== JAVA_OPTS =========="
 echo "$JAVA_OPTS"
