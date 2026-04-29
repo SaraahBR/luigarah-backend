@@ -66,6 +66,11 @@ if [ "${DEBUG_SSL:-false}" = "true" ]; then
 fi
 
 # ===============================
+# LIMPA CONFIG GLOBAL DA JVM (CRÍTICO)
+# ===============================
+unset JAVA_TOOL_OPTIONS
+
+# ===============================
 # START
 # ===============================
 echo "[entrypoint] iniciando aplicação..."
