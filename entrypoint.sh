@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "########################################"
-echo "[DEBUG] ENTRYPOINT VERSION FINAL 6.0"
+echo "[DEBUG] ENTRYPOINT VERSION FINAL 7.1"
 echo "########################################"
 
 echo "[entrypoint] iniciando..."
@@ -16,16 +16,17 @@ mkdir -p "$WALLET_DIR"
 echo "[DEBUG] WALLET_DIR=${WALLET_DIR}"
 
 # ===============================
-# 1) Wallet via Base64 (Render)
+# 1) Wallet via Base64
 # ===============================
-if [ "${ORACLE_WALLET_ZIP_B64:-}" != "" ]; then
+if [ -n "${ORACLE_WALLET_ZIP_B64:-}" ]; then
   echo "[entrypoint] Wallet via BASE64 detectado"
 
-  echo "[DEBUG] Tamanho BASE64: ${#ORACLE_WALLET_ZIP_B64}"
+  echo "[DEBUG] Tamanho BASE64:"
+  echo "${#ORACLE_WALLET_ZIP_B64}"
 
   printf "%s" "$ORACLE_WALLET_ZIP_B64" | base64 -d > /tmp/wallet.zip
 
-  echo "[DEBUG] Arquivo /tmp/wallet.zip criado"
+  echo "[DEBUG] Arquivo wallet.zip:"
   ls -lh /tmp/wallet.zip
 
   echo "[DEBUG] Validando ZIP..."
@@ -34,7 +35,7 @@ if [ "${ORACLE_WALLET_ZIP_B64:-}" != "" ]; then
     exit 1
   }
 
-  echo "[DEBUG] Limpando diretório wallet..."
+  echo "[DEBUG] Limpando WALLET_DIR..."
   rm -rf "${WALLET_DIR:?}/"*
 
   echo "[DEBUG] Extraindo wallet..."
@@ -43,34 +44,19 @@ if [ "${ORACLE_WALLET_ZIP_B64:-}" != "" ]; then
   rm -f /tmp/wallet.zip
 
 else
-  echo "[entrypoint] Wallet via arquivo"
-
-  WALLET_SRC=""
-
-  [ -f "/etc/secrets/wallet.zip" ] && WALLET_SRC="/etc/secrets/wallet.zip"
-  [ -z "$WALLET_SRC" ] && [ -f "/secrets/wallet.zip" ] && WALLET_SRC="/secrets/wallet.zip"
-
-  if [ -z "$WALLET_SRC" ]; then
-    echo "[ERRO] Nenhum wallet encontrado"
-    exit 1
-  fi
-
-  echo "[DEBUG] WALLET_SRC=${WALLET_SRC}"
-  ls -lh "$WALLET_SRC"
-
-  rm -rf "${WALLET_DIR:?}/"*
-  unzip -oq "$WALLET_SRC" -d "$WALLET_DIR"
+  echo "[ERRO] ORACLE_WALLET_ZIP_B64 não definido"
+  exit 1
 fi
 
 # ===============================
-# Ajuste de estrutura
+# Ajuste de estrutura interna
 # ===============================
 echo "[DEBUG] Verificando estrutura interna..."
 
 inner_dir=$(find "$WALLET_DIR" -mindepth 1 -maxdepth 1 -type d | head -n1 || true)
 
 if [ -n "${inner_dir}" ] && [ -f "${inner_dir}/tnsnames.ora" ]; then
-  echo "[DEBUG] Wallet dentro de subpasta → corrigindo estrutura"
+  echo "[DEBUG] Wallet em subpasta → ajustando"
 
   shopt -s dotglob nullglob
   mv "${inner_dir}/"* "$WALLET_DIR"/
@@ -88,70 +74,85 @@ echo "[DEBUG] TNS_ADMIN=${TNS_ADMIN}"
 echo "[DEBUG] PORT=${PORT}"
 
 # ===============================
-# Debug completo do wallet
+# DEBUG WALLET COMPLETO
 # ===============================
-echo "========== DEBUG WALLET =========="
+echo "========== WALLET =========="
+ls -lah "$WALLET_DIR"
 
-ls -la "$WALLET_DIR"
-
-echo "[DEBUG] Arquivos esperados:"
+echo "========== VALIDACAO ARQUIVOS =========="
 for f in tnsnames.ora sqlnet.ora cwallet.sso ewallet.p12 truststore.jks; do
   if [ -f "$WALLET_DIR/$f" ]; then
-    echo "✔ $f encontrado"
+    echo "[OK] $f encontrado"
   else
-    echo "✘ $f NÃO encontrado"
+    echo "[ERRO] $f NÃO encontrado"
   fi
 done
 
-echo "[DEBUG] Primeiras linhas do tnsnames.ora:"
-head -n 20 "$WALLET_DIR/tnsnames.ora" || true
+echo "========== TNSNAMES =========="
+cat "$WALLET_DIR/tnsnames.ora" || true
 
-echo "[DEBUG] Conteúdo do sqlnet.ora:"
+echo "========== SQLNET =========="
 cat "$WALLET_DIR/sqlnet.ora" || true
 
-echo "================================="
-
 # ===============================
-# Verificação crítica
+# VALIDAÇÃO CRÍTICA
 # ===============================
-[ -f "$WALLET_DIR/tnsnames.ora" ] || { echo "[ERRO] tnsnames.ora ausente"; exit 1; }
-[ -f "$WALLET_DIR/sqlnet.ora" ] || { echo "[ERRO] sqlnet.ora ausente"; exit 1; }
-[ -f "$WALLET_DIR/truststore.jks" ] || { echo "[ERRO] truststore.jks ausente"; exit 1; }
+[ -f "$WALLET_DIR/tnsnames.ora" ] || { echo "[ERRO FATAL] tnsnames.ora ausente"; exit 1; }
+[ -f "$WALLET_DIR/sqlnet.ora" ] || { echo "[ERRO FATAL] sqlnet.ora ausente"; exit 1; }
+[ -f "$WALLET_DIR/truststore.jks" ] || { echo "[ERRO FATAL] truststore.jks ausente"; exit 1; }
 
 echo "[entrypoint] Wallet válido ✔"
 
 # ===============================
-# DEBUG SSL avançado
+# DEBUG TRUSTSTORE REAL
 # ===============================
-if [ "${DEBUG_SSL:-false}" = "true" ]; then
-  echo "========== DEBUG SSL =========="
+echo "========== TRUSTSTORE =========="
 
-  echo "[DEBUG] TRUSTSTORE PATH:"
-  echo "${TNS_ADMIN}/truststore.jks"
+TRUSTSTORE_PATH="${TNS_ADMIN}/truststore.jks"
+TRUSTSTORE_PASSWORD="${TRUSTSTORE_PASSWORD:-changeit}"
 
-  echo "[DEBUG] TRUSTSTORE EXISTS?"
-  ls -lh "${TNS_ADMIN}/truststore.jks"
+echo "[DEBUG] PATH: $TRUSTSTORE_PATH"
+echo "[DEBUG] PASSWORD (SIM, EXPOSTO): $TRUSTSTORE_PASSWORD"
 
-  echo "[DEBUG] TRUSTSTORE HASH:"
-  sha256sum "${TNS_ADMIN}/truststore.jks" || true
+echo "[DEBUG] EXISTE?"
+ls -lh "$TRUSTSTORE_PATH"
 
-  echo "[DEBUG] TRUSTSTORE PASSWORD LENGTH:"
-  echo "${#TRUSTSTORE_PASSWORD:-0}"
+echo "[DEBUG] HASH:"
+sha256sum "$TRUSTSTORE_PATH" || true
 
-  echo "================================"
-fi
+echo "[DEBUG] TENTANDO LER TRUSTSTORE (keytool)..."
+keytool -list -keystore "$TRUSTSTORE_PATH" -storepass "$TRUSTSTORE_PASSWORD" || {
+  echo "[ERRO] Senha do truststore inválida ou arquivo corrompido"
+  exit 1
+}
 
 # ===============================
-# Inicialização do Java (CORRIGIDO)
+# DEBUG REDE
 # ===============================
-echo "[entrypoint] iniciando Java com SSL correto..."
+echo "========== DNS =========="
+getent hosts adb.sa-saopaulo-1.oraclecloud.com || true
+
+# ===============================
+# JAVA OPTIONS
+# ===============================
+JAVA_OPTS=""
+
+JAVA_OPTS="$JAVA_OPTS -Doracle.net.tns_admin=$TNS_ADMIN"
+JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStore=$TRUSTSTORE_PATH"
+JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStorePassword=$TRUSTSTORE_PASSWORD"
+JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStoreType=JKS"
+
+echo "========== JAVA_OPTS =========="
+echo "$JAVA_OPTS"
+
+# ===============================
+# START JAVA
+# ===============================
+echo "[entrypoint] iniciando Java..."
 
 exec java \
   -XX:+ExitOnOutOfMemoryError \
-  -Dserver.port="${PORT}" \
-  -Doracle.net.tns_admin="${TNS_ADMIN}" \
-  -Djavax.net.ssl.trustStore="${TNS_ADMIN}/truststore.jks" \
-  -Djavax.net.ssl.trustStorePassword="${TRUSTSTORE_PASSWORD}" \
-  -Djavax.net.ssl.trustStoreType=JKS \
+  -Dserver.port="$PORT" \
+  $JAVA_OPTS \
   ${DEBUG_SSL:+-Djavax.net.debug=ssl,handshake} \
   -jar /opt/app/app.jar
