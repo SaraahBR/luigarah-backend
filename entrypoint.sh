@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "########################################"
-echo "[DEBUG] ENTRYPOINT"
+echo "[DEBUG] ENTRYPOINT LIMPO"
 echo "########################################"
 
 echo "[entrypoint] iniciando..."
@@ -32,14 +32,13 @@ if [ -n "${ORACLE_WALLET_ZIP_B64:-}" ]; then
   rm -rf "${WALLET_DIR:?}/"*
   unzip -oq /tmp/wallet.zip -d "$WALLET_DIR"
   rm -f /tmp/wallet.zip
-
 else
   echo "[ERRO] ORACLE_WALLET_ZIP_B64 não definido"
   exit 1
 fi
 
 # ===============================
-# AJUSTE SUBPASTA
+# AJUSTE SUBPASTA (se necessário)
 # ===============================
 inner_dir=$(find "$WALLET_DIR" -mindepth 1 -maxdepth 1 -type d | head -n1 || true)
 
@@ -67,7 +66,7 @@ echo "[DEBUG] PORT=${PORT}"
 echo "========== WALLET =========="
 ls -lah "$WALLET_DIR"
 
-for f in tnsnames.ora sqlnet.ora cwallet.sso ewallet.p12 truststore.jks; do
+for f in tnsnames.ora sqlnet.ora cwallet.sso; do
   [ -f "$WALLET_DIR/$f" ] || {
     echo "[ERRO FATAL] $f ausente"
     exit 1
@@ -92,27 +91,12 @@ timeout 5 bash -c "</dev/tcp/adb.sa-saopaulo-1.oraclecloud.com/1522" \
 # ===============================
 JAVA_OPTS=""
 
-# Wallet
 JAVA_OPTS="$JAVA_OPTS -Doracle.net.tns_admin=$TNS_ADMIN"
 JAVA_OPTS="$JAVA_OPTS -Doracle.net.wallet_location=(SOURCE=(METHOD=FILE)(METHOD_DATA=(DIRECTORY=$TNS_ADMIN)))"
 JAVA_OPTS="$JAVA_OPTS -Doracle.net.ssl_server_dn_match=true"
-JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStore=$TNS_ADMIN/truststore.jks"
-JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStorePassword=changeit"
 
 echo "========== JAVA_OPTS =========="
 echo "$JAVA_OPTS"
-
-# ===============================
-# IMPORT TRUSTSTORE NO JAVA
-# ===============================
-echo "[DEBUG] Importando certificados no cacerts..."
-
-keytool -importkeystore \
-  -srckeystore "$TNS_ADMIN/truststore.jks" \
-  -srcstorepass changeit \
-  -destkeystore "$JAVA_HOME/lib/security/cacerts" \
-  -deststorepass changeit \
-  -noprompt || true
 
 # ===============================
 # START
