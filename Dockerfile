@@ -25,9 +25,6 @@ RUN apt-get update && apt-get install -y \
  && update-ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
-# CRÍTICO: garantir que o Java use o truststore do sistema
-ENV JAVA_TOOL_OPTIONS="-Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
-
 RUN mkdir -p /opt/app/wallet
 
 COPY entrypoint.sh /opt/app/entrypoint.sh
