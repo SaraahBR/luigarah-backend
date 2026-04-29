@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "########################################"
-echo "[DEBUG] ENTRYPOINT VERSION FINAL 7.1"
+echo "[DEBUG] ENTRYPOINT VERSION FINAL 8.0"
 echo "########################################"
 
 echo "[entrypoint] iniciando..."
@@ -49,7 +49,7 @@ else
 fi
 
 # ===============================
-# Ajuste de estrutura interna
+# Ajuste estrutura
 # ===============================
 echo "[DEBUG] Verificando estrutura interna..."
 
@@ -74,18 +74,14 @@ echo "[DEBUG] TNS_ADMIN=${TNS_ADMIN}"
 echo "[DEBUG] PORT=${PORT}"
 
 # ===============================
-# DEBUG WALLET COMPLETO
+# DEBUG WALLET
 # ===============================
 echo "========== WALLET =========="
 ls -lah "$WALLET_DIR"
 
 echo "========== VALIDACAO ARQUIVOS =========="
 for f in tnsnames.ora sqlnet.ora cwallet.sso ewallet.p12 truststore.jks; do
-  if [ -f "$WALLET_DIR/$f" ]; then
-    echo "[OK] $f encontrado"
-  else
-    echo "[ERRO] $f NÃO encontrado"
-  fi
+  [ -f "$WALLET_DIR/$f" ] && echo "[OK] $f encontrado" || echo "[ERRO] $f NÃO encontrado"
 done
 
 echo "========== TNSNAMES =========="
@@ -109,10 +105,25 @@ echo "[entrypoint] Wallet válido ✔"
 echo "========== TRUSTSTORE =========="
 
 TRUSTSTORE_PATH="${TNS_ADMIN}/truststore.jks"
-TRUSTSTORE_PASSWORD="${TRUSTSTORE_PASSWORD:-changeit}"
+RAW_PASSWORD="${TRUSTSTORE_PASSWORD:-changeit}"
 
-echo "[DEBUG] PATH: $TRUSTSTORE_PATH"
-echo "[DEBUG] PASSWORD (SIM, EXPOSTO): $TRUSTSTORE_PASSWORD"
+# 🔥 LIMPEZA REAL DA SENHA
+TRUSTSTORE_PASSWORD_CLEAN=$(echo -n "$RAW_PASSWORD" | tr -d '\r\n')
+
+echo "[DEBUG] PASSWORD ORIGINAL:"
+echo "$RAW_PASSWORD"
+
+echo "[DEBUG] PASSWORD LIMPA:"
+echo "$TRUSTSTORE_PASSWORD_CLEAN"
+
+echo "[DEBUG] BYTES DA SENHA:"
+echo -n "$RAW_PASSWORD" | od -An -t x1
+
+echo "[DEBUG] BYTES DA SENHA LIMPA:"
+echo -n "$TRUSTSTORE_PASSWORD_CLEAN" | od -An -t x1
+
+echo "[DEBUG] TAMANHO ORIGINAL: ${#RAW_PASSWORD}"
+echo "[DEBUG] TAMANHO LIMPO: ${#TRUSTSTORE_PASSWORD_CLEAN}"
 
 echo "[DEBUG] EXISTE?"
 ls -lh "$TRUSTSTORE_PATH"
@@ -120,11 +131,15 @@ ls -lh "$TRUSTSTORE_PATH"
 echo "[DEBUG] HASH:"
 sha256sum "$TRUSTSTORE_PATH" || true
 
-echo "[DEBUG] TENTANDO LER TRUSTSTORE (keytool)..."
-keytool -list -keystore "$TRUSTSTORE_PATH" -storepass "$TRUSTSTORE_PASSWORD" || {
-  echo "[ERRO] Senha do truststore inválida ou arquivo corrompido"
-  exit 1
+echo "[DEBUG] TESTE KEYTOOL (SENHA LIMPA)..."
+keytool -list \
+  -keystore "$TRUSTSTORE_PATH" \
+  -storepass "$TRUSTSTORE_PASSWORD_CLEAN" || {
+    echo "[ERRO] Truststore inválido OU senha realmente errada"
+    exit 1
 }
+
+echo "[OK] Truststore lido com sucesso"
 
 # ===============================
 # DEBUG REDE
@@ -139,7 +154,7 @@ JAVA_OPTS=""
 
 JAVA_OPTS="$JAVA_OPTS -Doracle.net.tns_admin=$TNS_ADMIN"
 JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStore=$TRUSTSTORE_PATH"
-JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStorePassword=$TRUSTSTORE_PASSWORD"
+JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStorePassword=$TRUSTSTORE_PASSWORD_CLEAN"
 JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStoreType=JKS"
 
 echo "========== JAVA_OPTS =========="
