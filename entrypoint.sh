@@ -7,9 +7,6 @@ echo "########################################"
 
 echo "[entrypoint] iniciando..."
 
-# ===============================
-# CONFIG
-# ===============================
 WALLET_DIR="/opt/app/wallet"
 mkdir -p "$WALLET_DIR"
 
@@ -46,7 +43,7 @@ if [ -n "$inner_dir" ] && [ -f "$inner_dir/tnsnames.ora" ]; then
 fi
 
 # ===============================
-# FORÇA SQLNET CORRETO (CRÍTICO)
+# FORÇA SQLNET CORRETO
 # ===============================
 echo "[DEBUG] Corrigindo sqlnet.ora"
 
@@ -70,12 +67,16 @@ echo "[DEBUG] PORT=$PORT"
 echo "========== WALLET =========="
 ls -lah "$WALLET_DIR"
 
-for f in tnsnames.ora sqlnet.ora cwallet.sso; do
+for f in tnsnames.ora sqlnet.ora cwallet.sso ewallet.p12; do
   [ -f "$WALLET_DIR/$f" ] || {
     echo "[ERRO FATAL] $f ausente"
     exit 1
   }
 done
+
+# VALIDAÇÃO REAL DO WALLET
+echo "========== VALIDANDO WALLET =========="
+strings "$WALLET_DIR/cwallet.sso" | head -n 5 || true
 
 echo "========== SQLNET =========="
 cat "$WALLET_DIR/sqlnet.ora"
@@ -92,10 +93,11 @@ timeout 5 bash -c "</dev/tcp/adb.sa-saopaulo-1.oraclecloud.com/1522" \
   || echo "[WARN] Porta 1522 inacessível"
 
 # ===============================
-# JAVA OPTIONS (MINIMALISTA)
+# JAVA OPTIONS 
 # ===============================
 JAVA_OPTS="\
 -Doracle.net.tns_admin=$TNS_ADMIN \
+-Doracle.net.wallet_location=(SOURCE=(METHOD=FILE)(METHOD_DATA=(DIRECTORY=$TNS_ADMIN))) \
 -Doracle.net.ssl_server_dn_match=true \
 "
 
@@ -103,7 +105,7 @@ echo "========== JAVA_OPTS =========="
 echo "$JAVA_OPTS"
 
 # ===============================
-# DEBUG SSL (opcional)
+# DEBUG SSL
 # ===============================
 if [ "${DEBUG_SSL:-false}" = "true" ]; then
   JAVA_OPTS="$JAVA_OPTS -Djavax.net.debug=ssl,handshake"
