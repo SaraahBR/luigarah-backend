@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "########################################"
-echo "[DEBUG] ENTRYPOINT VERSION FINAL 11.0 ORACLE WALLET + TRUSTSTORE FIX"
+echo "[DEBUG] ENTRYPOINT VERSION FINAL 12.0 (FIX REAL SSL)"
 echo "########################################"
 
 echo "[entrypoint] iniciando..."
@@ -92,15 +92,12 @@ timeout 5 bash -c "</dev/tcp/adb.sa-saopaulo-1.oraclecloud.com/1522" \
 # ===============================
 JAVA_OPTS=""
 
-# Wallet
+# Wallet (ESSENCIAL)
 JAVA_OPTS="$JAVA_OPTS -Doracle.net.tns_admin=$TNS_ADMIN"
 JAVA_OPTS="$JAVA_OPTS -Doracle.net.wallet_location=(SOURCE=(METHOD=FILE)(METHOD_DATA=(DIRECTORY=$TNS_ADMIN)))"
 JAVA_OPTS="$JAVA_OPTS -Doracle.net.ssl_server_dn_match=true"
 
-# 🔥 TRUSTSTORE
-JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStore=$TNS_ADMIN/ewallet.p12"
-JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStoreType=PKCS12"
-JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStorePassword="
+# TRUSTSTORE REMOVIDO (USA CACERTS PADRÃO DO JAVA)
 
 echo "========== JAVA_OPTS =========="
 echo "$JAVA_OPTS"
