@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "########################################"
-echo "[DEBUG] ENTRYPOINT VERSION FINAL 10.0 CLEAN ORACLE WALLET"
+echo "[DEBUG] ENTRYPOINT VERSION FINAL 10.1 ORACLE WALLET FIXED"
 echo "########################################"
 
 echo "[entrypoint] iniciando..."
@@ -67,44 +67,37 @@ echo "[DEBUG] TNS_ADMIN=${TNS_ADMIN}"
 echo "[DEBUG] PORT=${PORT}"
 
 # ===============================
-# DEBUG WALLET
+# VALIDAÇÃO
 # ===============================
 echo "========== WALLET =========="
 ls -lah "$WALLET_DIR"
 
-echo "========== VALIDACAO =========="
 for f in tnsnames.ora sqlnet.ora cwallet.sso; do
-  [ -f "$WALLET_DIR/$f" ] && echo "[OK] $f encontrado" || {
-    echo "[ERRO] $f NÃO encontrado"
+  [ -f "$WALLET_DIR/$f" ] || {
+    echo "[ERRO FATAL] $f ausente"
     exit 1
   }
 done
-
-echo "========== TNSNAMES =========="
-cat "$WALLET_DIR/tnsnames.ora" || true
-
-echo "========== SQLNET =========="
-cat "$WALLET_DIR/sqlnet.ora" || true
 
 echo "[entrypoint] Wallet válido ✔"
 
 # ===============================
 # DEBUG REDE
 # ===============================
-echo "========== DNS =========="
 getent hosts adb.sa-saopaulo-1.oraclecloud.com || true
 
-echo "========== TESTE PORTA 1522 =========="
 timeout 5 bash -c "</dev/tcp/adb.sa-saopaulo-1.oraclecloud.com/1522" \
-  && echo "[OK] Porta acessível" \
-  || echo "[WARN] Porta inacessível"
+  && echo "[OK] Porta 1522 acessível" \
+  || echo "[WARN] Porta 1522 inacessível"
 
 # ===============================
-# JAVA OPTIONS (CORRETO)
+# JAVA OPTIONS (FIX REAL)
 # ===============================
 JAVA_OPTS=""
 
 JAVA_OPTS="$JAVA_OPTS -Doracle.net.tns_admin=$TNS_ADMIN"
+JAVA_OPTS="$JAVA_OPTS -Doracle.net.wallet_location=(SOURCE=(METHOD=FILE)(METHOD_DATA=(DIRECTORY=$TNS_ADMIN)))"
+JAVA_OPTS="$JAVA_OPTS -Doracle.net.ssl_server_dn_match=true"
 
 echo "========== JAVA_OPTS =========="
 echo "$JAVA_OPTS"
