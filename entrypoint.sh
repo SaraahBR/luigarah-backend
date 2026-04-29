@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "########################################"
-echo "[DEBUG] ENTRYPOINT LIMPO"
+echo "[ENTRYPOINT FINAL CORRETO]"
 echo "########################################"
 
 echo "[entrypoint] iniciando..."
@@ -13,8 +13,6 @@ echo "[entrypoint] iniciando..."
 WALLET_DIR="/opt/app/wallet"
 mkdir -p "$WALLET_DIR"
 
-echo "[DEBUG] WALLET_DIR=${WALLET_DIR}"
-
 # ===============================
 # WALLET BASE64
 # ===============================
@@ -23,8 +21,7 @@ if [ -n "${ORACLE_WALLET_ZIP_B64:-}" ]; then
 
   printf "%s" "$ORACLE_WALLET_ZIP_B64" | base64 -d > /tmp/wallet.zip
 
-  echo "[DEBUG] Validando ZIP..."
-  unzip -t /tmp/wallet.zip || {
+  unzip -t /tmp/wallet.zip >/dev/null || {
     echo "[ERRO] ZIP inválido"
     exit 1
   }
@@ -38,17 +35,13 @@ else
 fi
 
 # ===============================
-# AJUSTE SUBPASTA (se necessário)
+# AJUSTE SUBPASTA
 # ===============================
 inner_dir=$(find "$WALLET_DIR" -mindepth 1 -maxdepth 1 -type d | head -n1 || true)
 
 if [ -n "$inner_dir" ] && [ -f "$inner_dir/tnsnames.ora" ]; then
-  echo "[DEBUG] Ajustando estrutura do wallet"
-
-  shopt -s dotglob nullglob
   mv "$inner_dir/"* "$WALLET_DIR"/
   rmdir "$inner_dir" || true
-  shopt -u dotglob nullglob
 fi
 
 # ===============================
@@ -57,8 +50,8 @@ fi
 export TNS_ADMIN="$WALLET_DIR"
 export PORT="${PORT:-8080}"
 
-echo "[DEBUG] TNS_ADMIN=${TNS_ADMIN}"
-echo "[DEBUG] PORT=${PORT}"
+echo "[DEBUG] TNS_ADMIN=$TNS_ADMIN"
+echo "[DEBUG] PORT=$PORT"
 
 # ===============================
 # VALIDAÇÃO
@@ -66,17 +59,18 @@ echo "[DEBUG] PORT=${PORT}"
 echo "========== WALLET =========="
 ls -lah "$WALLET_DIR"
 
-for f in tnsnames.ora sqlnet.ora cwallet.sso; do
+for f in tnsnames.ora sqlnet.ora cwallet.sso truststore.jks; do
   [ -f "$WALLET_DIR/$f" ] || {
     echo "[ERRO FATAL] $f ausente"
     exit 1
   }
 done
 
-echo "[entrypoint] Wallet válido ✔"
+echo "========== SQLNET =========="
+cat "$TNS_ADMIN/sqlnet.ora"
 
 # ===============================
-# DEBUG REDE
+# REDE
 # ===============================
 echo "========== DNS =========="
 getent hosts adb.sa-saopaulo-1.oraclecloud.com || true
@@ -89,14 +83,24 @@ timeout 5 bash -c "</dev/tcp/adb.sa-saopaulo-1.oraclecloud.com/1522" \
 # ===============================
 # JAVA OPTIONS
 # ===============================
-JAVA_OPTS=""
-
-JAVA_OPTS="$JAVA_OPTS -Doracle.net.tns_admin=$TNS_ADMIN"
-JAVA_OPTS="$JAVA_OPTS -Doracle.net.wallet_location=(SOURCE=(METHOD=FILE)(METHOD_DATA=(DIRECTORY=$TNS_ADMIN)))"
-JAVA_OPTS="$JAVA_OPTS -Doracle.net.ssl_server_dn_match=true"
+JAVA_OPTS="\
+-Doracle.net.tns_admin=$TNS_ADMIN \
+-Doracle.net.wallet_location=(SOURCE=(METHOD=FILE)(METHOD_DATA=(DIRECTORY=$TNS_ADMIN))) \
+-Doracle.net.ssl_server_dn_match=true \
+-Djavax.net.ssl.trustStore=$TNS_ADMIN/truststore.jks \
+-Djavax.net.ssl.trustStorePassword=changeit \
+"
 
 echo "========== JAVA_OPTS =========="
 echo "$JAVA_OPTS"
+
+# ===============================
+# DEBUG SSL
+# ===============================
+if [ "${DEBUG_SSL:-false}" = "true" ]; then
+  JAVA_OPTS="$JAVA_OPTS -Djavax.net.debug=ssl,handshake"
+  echo "[DEBUG] SSL DEBUG ATIVADO"
+fi
 
 # ===============================
 # START
@@ -107,5 +111,4 @@ exec java \
   -XX:+ExitOnOutOfMemoryError \
   -Dserver.port="$PORT" \
   $JAVA_OPTS \
-  ${DEBUG_SSL:+-Djavax.net.debug=ssl,handshake} \
   -jar /opt/app/app.jar
