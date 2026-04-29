@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://www.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -28,6 +29,7 @@
     </properties>
 
     <dependencies>
+
         <!-- Web + JSON -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -40,7 +42,7 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
-        <!-- OAuth2 Client (Google/Facebook) -->
+        <!-- OAuth2 Client -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-oauth2-client</artifactId>
@@ -65,19 +67,19 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- JPA / Hibernate -->
+        <!-- JPA -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
-        <!-- Bean Validation -->
+        <!-- Validation -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
-        <!-- Flyway + Oracle -->
+        <!-- Flyway -->
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
@@ -87,31 +89,31 @@
             <artifactId>flyway-database-oracle</artifactId>
         </dependency>
 
-        <!-- Oracle JDBC -->
+        <!-- 🔥 Oracle JDBC (CORRIGIDO) -->
         <dependency>
             <groupId>com.oracle.database.jdbc</groupId>
             <artifactId>ojdbc11</artifactId>
-            <version>21.11.0.0</version>
+            <version>23.3.0.23.09</version>
         </dependency>
 
-        <!-- Wallet TCPS -->
+        <!-- 🔥 Wallet TCPS (ALINHADO COM DRIVER) -->
         <dependency>
             <groupId>com.oracle.database.security</groupId>
             <artifactId>oraclepki</artifactId>
-            <version>21.11.0.0</version>
+            <version>23.3.0.23.09</version>
         </dependency>
         <dependency>
             <groupId>com.oracle.database.security</groupId>
             <artifactId>osdt_core</artifactId>
-            <version>21.11.0.0</version>
+            <version>23.3.0.23.09</version>
         </dependency>
         <dependency>
             <groupId>com.oracle.database.security</groupId>
             <artifactId>osdt_cert</artifactId>
-            <version>21.11.0.0</version>
+            <version>23.3.0.23.09</version>
         </dependency>
 
-        <!-- Swagger / OpenAPI -->
+        <!-- Swagger -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
@@ -133,14 +135,14 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- Testes -->
+        <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- Upload de arquivos -->
+        <!-- Upload -->
         <dependency>
             <groupId>commons-fileupload</groupId>
             <artifactId>commons-fileupload</artifactId>
@@ -152,35 +154,37 @@
             <version>2.15.1</version>
         </dependency>
 
-        <!-- AWS SDK S3 (para Cloudflare R2) -->
+        <!-- AWS S3 -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>s3</artifactId>
             <version>2.20.26</version>
         </dependency>
 
-        <!-- Email (JavaMail + Brevo API) -->
+        <!-- Email -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
 
-        <!-- Thymeleaf para templates de email -->
+        <!-- Thymeleaf -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-thymeleaf</artifactId>
         </dependency>
 
-        <!-- HTTP Client para API do Brevo -->
+        <!-- HTTP Client -->
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
             <version>4.12.0</version>
         </dependency>
+
     </dependencies>
 
     <build>
         <plugins>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
@@ -230,6 +234,8 @@
                     <useSystemClassLoader>false</useSystemClassLoader>
                 </configuration>
             </plugin>
+
         </plugins>
     </build>
+
 </project>
