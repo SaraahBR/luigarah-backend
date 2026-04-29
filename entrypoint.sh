@@ -74,9 +74,16 @@ for f in tnsnames.ora sqlnet.ora cwallet.sso ewallet.p12; do
   }
 done
 
+# ===============================
 # VALIDAÇÃO REAL DO WALLET
+# ===============================
 echo "========== VALIDANDO WALLET =========="
-strings "$WALLET_DIR/cwallet.sso" | head -n 5 || true
+
+if command -v strings >/dev/null 2>&1; then
+  strings "$WALLET_DIR/cwallet.sso" | head -n 5 || true
+else
+  echo "[WARN] comando 'strings' não disponível no container"
+fi
 
 echo "========== SQLNET =========="
 cat "$WALLET_DIR/sqlnet.ora"
@@ -91,6 +98,20 @@ echo "========== PORTA =========="
 timeout 5 bash -c "</dev/tcp/adb.sa-saopaulo-1.oraclecloud.com/1522" \
   && echo "[OK] Porta 1522 acessível" \
   || echo "[WARN] Porta 1522 inacessível"
+
+# ===============================
+# TESTE SSL REAL (CRÍTICO)
+# ===============================
+echo "========== TESTE SSL =========="
+
+if command -v openssl >/dev/null 2>&1; then
+  openssl s_client \
+    -connect adb.sa-saopaulo-1.oraclecloud.com:1522 \
+    -servername adb.sa-saopaulo-1.oraclecloud.com \
+    </dev/null 2>/dev/null | openssl x509 -noout -issuer -subject || true
+else
+  echo "[WARN] openssl não disponível"
+fi
 
 # ===============================
 # JAVA OPTIONS 
