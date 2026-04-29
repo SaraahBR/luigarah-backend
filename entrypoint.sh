@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "########################################"
-echo "[DEBUG] ENTRYPOINT VERSION FINAL 8.0"
+echo "[DEBUG] ENTRYPOINT VERSION FINAL 9.0"
 echo "########################################"
 
 echo "[entrypoint] iniciando..."
@@ -100,30 +100,19 @@ cat "$WALLET_DIR/sqlnet.ora" || true
 echo "[entrypoint] Wallet válido ✔"
 
 # ===============================
-# DEBUG TRUSTSTORE REAL
+# DEBUG TRUSTSTORE (CORRIGIDO)
 # ===============================
 echo "========== TRUSTSTORE =========="
 
 TRUSTSTORE_PATH="${TNS_ADMIN}/truststore.jks"
 RAW_PASSWORD="${TRUSTSTORE_PASSWORD:-changeit}"
 
-# 🔥 LIMPEZA REAL DA SENHA
 TRUSTSTORE_PASSWORD_CLEAN=$(echo -n "$RAW_PASSWORD" | tr -d '\r\n')
-
-echo "[DEBUG] PASSWORD ORIGINAL:"
-echo "$RAW_PASSWORD"
 
 echo "[DEBUG] PASSWORD LIMPA:"
 echo "$TRUSTSTORE_PASSWORD_CLEAN"
 
-echo "[DEBUG] BYTES DA SENHA:"
-echo -n "$RAW_PASSWORD" | od -An -t x1
-
-echo "[DEBUG] BYTES DA SENHA LIMPA:"
-echo -n "$TRUSTSTORE_PASSWORD_CLEAN" | od -An -t x1
-
-echo "[DEBUG] TAMANHO ORIGINAL: ${#RAW_PASSWORD}"
-echo "[DEBUG] TAMANHO LIMPO: ${#TRUSTSTORE_PASSWORD_CLEAN}"
+echo "[DEBUG] TAMANHO SENHA: ${#TRUSTSTORE_PASSWORD_CLEAN}"
 
 echo "[DEBUG] EXISTE?"
 ls -lh "$TRUSTSTORE_PATH"
@@ -131,21 +120,30 @@ ls -lh "$TRUSTSTORE_PATH"
 echo "[DEBUG] HASH:"
 sha256sum "$TRUSTSTORE_PATH" || true
 
-echo "[DEBUG] TESTE KEYTOOL (SENHA LIMPA)..."
+echo "[DEBUG] DETECTANDO TIPO DO KEYSTORE..."
+file "$TRUSTSTORE_PATH" || true
+
+echo "[DEBUG] TESTE KEYTOOL (PKCS12)..."
 keytool -list \
+  -storetype PKCS12 \
   -keystore "$TRUSTSTORE_PATH" \
   -storepass "$TRUSTSTORE_PASSWORD_CLEAN" || {
-    echo "[ERRO] Truststore inválido OU senha realmente errada"
+    echo "[ERRO] Falha ao ler truststore como PKCS12"
     exit 1
 }
 
-echo "[OK] Truststore lido com sucesso"
+echo "[OK] Truststore PKCS12 válido"
 
 # ===============================
 # DEBUG REDE
 # ===============================
 echo "========== DNS =========="
 getent hosts adb.sa-saopaulo-1.oraclecloud.com || true
+
+echo "========== TESTE PORTA 1522 =========="
+timeout 5 bash -c "</dev/tcp/adb.sa-saopaulo-1.oraclecloud.com/1522" \
+  && echo "[OK] Porta acessível" \
+  || echo "[WARN] Porta inacessível"
 
 # ===============================
 # JAVA OPTIONS
@@ -155,7 +153,7 @@ JAVA_OPTS=""
 JAVA_OPTS="$JAVA_OPTS -Doracle.net.tns_admin=$TNS_ADMIN"
 JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStore=$TRUSTSTORE_PATH"
 JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStorePassword=$TRUSTSTORE_PASSWORD_CLEAN"
-JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStoreType=JKS"
+JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStoreType=PKCS12"
 
 echo "========== JAVA_OPTS =========="
 echo "$JAVA_OPTS"
