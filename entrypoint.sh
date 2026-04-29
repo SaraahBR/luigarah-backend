@@ -106,8 +106,6 @@ JAVA_OPTS="\
 -Doracle.net.tns_admin=$TNS_ADMIN \
 -Doracle.net.wallet_location=(SOURCE=(METHOD=FILE)(METHOD_DATA=(DIRECTORY=$TNS_ADMIN))) \
 -Doracle.net.ssl_server_dn_match=true \
--Djavax.net.ssl.trustStore=$TNS_ADMIN/truststore.jks \
--Djavax.net.ssl.trustStorePassword=changeit \
 "
 
 echo "========== JAVA_OPTS =========="
