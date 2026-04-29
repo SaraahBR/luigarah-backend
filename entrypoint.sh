@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "########################################"
-echo "[ENTRYPOINT FINAL CORRETO]"
+echo "[ENTRYPOINT DEBUG SSL / TRUSTSTORE]"
 echo "########################################"
 
 echo "[entrypoint] iniciando..."
@@ -70,6 +70,25 @@ echo "========== SQLNET =========="
 cat "$TNS_ADMIN/sqlnet.ora"
 
 # ===============================
+# DEBUG TRUSTSTORE (AQUI É O OURO)
+# ===============================
+echo "========== TRUSTSTORE INFO =========="
+
+# Info geral
+keytool -list \
+  -keystore "$TNS_ADMIN/truststore.jks" \
+  -storepass changeit \
+  || echo "[ERRO] Não conseguiu ler truststore"
+
+echo "========== TRUSTSTORE DETALHADO =========="
+
+# MOSTRA TODOS OS CERTIFICADOS COM DETALHES
+keytool -list -v \
+  -keystore "$TNS_ADMIN/truststore.jks" \
+  -storepass changeit \
+  || echo "[ERRO] Falha ao detalhar truststore"
+
+# ===============================
 # REDE
 # ===============================
 echo "========== DNS =========="
@@ -95,9 +114,9 @@ echo "========== JAVA_OPTS =========="
 echo "$JAVA_OPTS"
 
 # ===============================
-# DEBUG SSL
+# DEBUG SSL (REAL)
 # ===============================
-if [ "${DEBUG_SSL:-false}" = "true" ]; then
+if [ "${DEBUG_SSL:-true}" = "true" ]; then
   JAVA_OPTS="$JAVA_OPTS -Djavax.net.debug=ssl,handshake"
   echo "[DEBUG] SSL DEBUG ATIVADO"
 fi
