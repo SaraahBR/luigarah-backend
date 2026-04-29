@@ -114,14 +114,11 @@ else
 fi
 
 # ===============================
-# JAVA OPTIONS (CORREÇÃO REAL)
+# JAVA OPTIONS (CORRETO)
 # ===============================
 JAVA_OPTS="\
 -Doracle.net.tns_admin=$TNS_ADMIN \
--Doracle.net.wallet_location=(SOURCE=(METHOD=FILE)(METHOD_DATA=(DIRECTORY=$TNS_ADMIN))) \
 -Doracle.net.ssl_server_dn_match=true \
--Djavax.net.ssl.trustStoreType=SSO \
--Djavax.net.ssl.trustStore=$TNS_ADMIN/cwallet.sso \
 "
 
 echo "========== JAVA_OPTS =========="
