@@ -67,7 +67,7 @@ echo "[DEBUG] PORT=${PORT}"
 echo "========== WALLET =========="
 ls -lah "$WALLET_DIR"
 
-for f in tnsnames.ora sqlnet.ora cwallet.sso ewallet.p12 truststore.jks; do
+for f in tnsnames.ora sqlnet.ora cwallet.sso ewallet.p12; do
   [ -f "$WALLET_DIR/$f" ] || {
     echo "[ERRO FATAL] $f ausente"
     exit 1
@@ -92,14 +92,10 @@ timeout 5 bash -c "</dev/tcp/adb.sa-saopaulo-1.oraclecloud.com/1522" \
 # ===============================
 JAVA_OPTS=""
 
-# Wallet (conexão)
+# Wallet (ESSENCIAL)
 JAVA_OPTS="$JAVA_OPTS -Doracle.net.tns_admin=$TNS_ADMIN"
 JAVA_OPTS="$JAVA_OPTS -Doracle.net.wallet_location=(SOURCE=(METHOD=FILE)(METHOD_DATA=(DIRECTORY=$TNS_ADMIN)))"
 JAVA_OPTS="$JAVA_OPTS -Doracle.net.ssl_server_dn_match=true"
-
-# TRUSTSTORE CORRETO
-JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStore=$TNS_ADMIN/truststore.jks"
-JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStorePassword=changeit"
 
 echo "========== JAVA_OPTS =========="
 echo "$JAVA_OPTS"
