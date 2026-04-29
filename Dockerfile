@@ -17,11 +17,16 @@ WORKDIR /opt/app
 
 COPY --from=build /app/target/*.jar app.jar
 
-RUN mkdir -p /opt/app/wallet \
- && apt-get update && apt-get install -y unzip \
+RUN apt-get update && apt-get install -y \
+    unzip \
+    ca-certificates \
+ && update-ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
-# USA O ARQUIVO REAL
+# Wallet dir
+RUN mkdir -p /opt/app/wallet
+
+# Entrypoint
 COPY entrypoint.sh /opt/app/entrypoint.sh
 RUN chmod +x /opt/app/entrypoint.sh
 
