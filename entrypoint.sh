@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "########################################"
-echo "[ENTRYPOINT DEBUG SSL / TRUSTSTORE]"
+echo "[ENTRYPOINT FINAL LIMPO - ORACLE WALLET]"
 echo "########################################"
 
 echo "[entrypoint] iniciando..."
@@ -40,9 +40,20 @@ fi
 inner_dir=$(find "$WALLET_DIR" -mindepth 1 -maxdepth 1 -type d | head -n1 || true)
 
 if [ -n "$inner_dir" ] && [ -f "$inner_dir/tnsnames.ora" ]; then
+  echo "[DEBUG] Ajustando estrutura do wallet"
   mv "$inner_dir/"* "$WALLET_DIR"/
   rmdir "$inner_dir" || true
 fi
+
+# ===============================
+# FORÇA SQLNET CORRETO (CRÍTICO)
+# ===============================
+echo "[DEBUG] Corrigindo sqlnet.ora"
+
+cat > "$WALLET_DIR/sqlnet.ora" <<EOF
+WALLET_LOCATION = (SOURCE = (METHOD = FILE) (METHOD_DATA = (DIRECTORY=$WALLET_DIR)))
+SSL_SERVER_DN_MATCH = yes
+EOF
 
 # ===============================
 # VARIÁVEIS
@@ -59,7 +70,7 @@ echo "[DEBUG] PORT=$PORT"
 echo "========== WALLET =========="
 ls -lah "$WALLET_DIR"
 
-for f in tnsnames.ora sqlnet.ora cwallet.sso truststore.jks; do
+for f in tnsnames.ora sqlnet.ora cwallet.sso; do
   [ -f "$WALLET_DIR/$f" ] || {
     echo "[ERRO FATAL] $f ausente"
     exit 1
@@ -67,26 +78,7 @@ for f in tnsnames.ora sqlnet.ora cwallet.sso truststore.jks; do
 done
 
 echo "========== SQLNET =========="
-cat "$TNS_ADMIN/sqlnet.ora"
-
-# ===============================
-# DEBUG TRUSTSTORE (AQUI É O OURO)
-# ===============================
-echo "========== TRUSTSTORE INFO =========="
-
-# Info geral
-keytool -list \
-  -keystore "$TNS_ADMIN/truststore.jks" \
-  -storepass changeit \
-  || echo "[ERRO] Não conseguiu ler truststore"
-
-echo "========== TRUSTSTORE DETALHADO =========="
-
-# MOSTRA TODOS OS CERTIFICADOS COM DETALHES
-keytool -list -v \
-  -keystore "$TNS_ADMIN/truststore.jks" \
-  -storepass changeit \
-  || echo "[ERRO] Falha ao detalhar truststore"
+cat "$WALLET_DIR/sqlnet.ora"
 
 # ===============================
 # REDE
@@ -100,11 +92,10 @@ timeout 5 bash -c "</dev/tcp/adb.sa-saopaulo-1.oraclecloud.com/1522" \
   || echo "[WARN] Porta 1522 inacessível"
 
 # ===============================
-# JAVA OPTIONS
+# JAVA OPTIONS (MINIMALISTA)
 # ===============================
 JAVA_OPTS="\
 -Doracle.net.tns_admin=$TNS_ADMIN \
--Doracle.net.wallet_location=(SOURCE=(METHOD=FILE)(METHOD_DATA=(DIRECTORY=$TNS_ADMIN))) \
 -Doracle.net.ssl_server_dn_match=true \
 "
 
@@ -112,9 +103,9 @@ echo "========== JAVA_OPTS =========="
 echo "$JAVA_OPTS"
 
 # ===============================
-# DEBUG SSL (REAL)
+# DEBUG SSL (opcional)
 # ===============================
-if [ "${DEBUG_SSL:-true}" = "true" ]; then
+if [ "${DEBUG_SSL:-false}" = "true" ]; then
   JAVA_OPTS="$JAVA_OPTS -Djavax.net.debug=ssl,handshake"
   echo "[DEBUG] SSL DEBUG ATIVADO"
 fi
