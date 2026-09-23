@@ -16,6 +16,13 @@ import java.time.LocalDateTime;
  * - Campos de URL (imagem / imagemHover) passam por cleanUrl(): remove CR/LF, espaços nas pontas e QUALQUER whitespace no meio.
  * - Campo imagens (JSON em String contendo array de URLs) passa por cleanUrlArrayJson().
  * - Demais Strings passam por cleanText(): remove CR/LF e trim, preservando espaços internos.
+ *
+ * Banco (PostgreSQL / Supabase):
+ * - Tabela app_luigarah.produtos; o nome em maiúsculas é convertido para minúsculas pelo Postgres.
+ * - IDs vêm da sequence app_luigarah.produtos_seq (allocationSize = 1).
+ * - Textos longos (descricao, imagem, imagens, composicao, destaques, modelo) são TEXT.
+ *   Não use @Lob: no PostgreSQL o Hibernate mapeia @Lob String como large object (oid),
+ *   o que quebra a leitura de colunas TEXT.
  */
 @Entity
 @Table(name = "PRODUTOS", schema = "APP_LUIGARAH")
@@ -47,9 +54,7 @@ public class Produto {
     private String autor;
 
     @NotBlank(message = "Descrição é obrigatória")
-    @Lob
-    @Basic(fetch = FetchType.EAGER)
-    @Column(name = "DESCRICAO", nullable = false)
+    @Column(name = "DESCRICAO", nullable = false, columnDefinition = "text")
     private String descricao;
 
     @NotNull(message = "Preço é obrigatório")
@@ -63,31 +68,22 @@ public class Produto {
     private String dimensao;
 
     @NotBlank(message = "Imagem principal é obrigatória")
-    @Lob
-    @Basic(fetch = FetchType.EAGER)
-    @Column(name = "IMAGEM", nullable = false)
+    @Column(name = "IMAGEM", nullable = false, columnDefinition = "text")
     private String imagem;
 
-    @Lob
-    @Basic(fetch = FetchType.EAGER)
-    @Column(name = "IMAGEM_HOVER")
+    @Column(name = "IMAGEM_HOVER", columnDefinition = "text")
     private String imagemHover;
 
     /** JSON em texto: array de URLs. */
-    @Lob
-    @Basic(fetch = FetchType.EAGER)
-    @Column(name = "IMAGENS")
+    @Column(name = "IMAGENS", columnDefinition = "text")
     private String imagens;
 
     @NotBlank(message = "Composição é obrigatória")
-    @Lob
-    @Basic(fetch = FetchType.EAGER)
-    @Column(name = "COMPOSICAO", nullable = false)
+    @Column(name = "COMPOSICAO", nullable = false, columnDefinition = "text")
     private String composicao;
 
-    /** JSON em texto: objeto com medidas. */
-    /** Destaques como texto longo (VARCHAR2(16000) no Oracle). */
-    @Column(name = "DESTAQUES", length = 16000)
+    /** Destaques como texto longo (JSON em texto: array de strings). */
+    @Column(name = "DESTAQUES", columnDefinition = "text")
     private String destaques;
 
     @NotBlank(message = "Categoria é obrigatória")
@@ -96,14 +92,12 @@ public class Produto {
     private String categoria;
 
     /** JSON em texto: objeto com medidas. */
-    @Lob
-    @Basic(fetch = FetchType.EAGER)
-    @Column(name = "MODELO")
+    @Column(name = "MODELO", columnDefinition = "text")
     private String modelo;
 
     /**
      * Padrão de tamanho do produto (usa|br|sapatos).
-     * Mapeia a coluna PADRAO_TAMANHO no Oracle (conforme CK_PROD_PADRAO_TAMANHO).
+     * Mapeia a coluna PADRAO_TAMANHO (conforme CK_PROD_PADRAO_TAMANHO).
      */
     @Pattern(regexp = "usa|br|sapatos", message = "PADRAO_TAMANHO deve ser usa, br ou sapatos")
     @Column(name = "PADRAO_TAMANHO", length = 10)

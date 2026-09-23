@@ -4,6 +4,13 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
+/**
+ * Item do catálogo de tamanhos (ex.: roupas/br/M, sapatos/br/38).
+ *
+ * O catálogo é populado pela migration V2__seed_identidades_tamanhos.sql.
+ * No PostgreSQL o id é uma coluna IDENTITY, por isso não há @GeneratedValue:
+ * a aplicação apenas lê e atualiza tamanhos, nunca os cria.
+ */
 @Entity
 @Table(name = "tamanhos")
 public class Tamanho {
@@ -21,7 +28,7 @@ public class Tamanho {
     @Column(nullable = false, length = 40)
     private String etiqueta;
 
-    // padrão (usa|br|sapatos) — refletindo PADRAO NOT NULL no Oracle
+    // padrão (usa|br|sapatos) — refletindo a coluna PADRAO NOT NULL
     @NotBlank
     @Pattern(regexp = "usa|br|sapatos")
     @Column(name = "padrao", nullable = false, length = 10)

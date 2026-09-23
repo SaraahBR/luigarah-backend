@@ -8,13 +8,21 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
+/**
+ * Consulta e altera o padrão de tamanho (usa | br | sapatos | null) em tamanhos (coluna padrao).
+ *
+ * PostgreSQL / Supabase:
+ * - As tabelas ficam no schema app_luigarah (referenciado explicitamente aqui).
+ * - CAST(:padrao AS varchar) permite passar padrao = null: sem o CAST o Postgres
+ *   não consegue inferir o tipo do parâmetro nulo enviado pelo Hibernate.
+ */
 public interface RepositorioPadraoTamanho extends JpaRepository<Tamanho, Long> {
 
     // Lista tamanhos por padrao (usa, br, sapatos, null)
     @Query(value = """
             SELECT * FROM app_luigarah.tamanhos
-             WHERE (:padrao IS NULL AND padrao IS NULL)
-                OR (:padrao IS NOT NULL AND LOWER(padrao) = LOWER(:padrao))
+             WHERE (CAST(:padrao AS varchar) IS NULL AND padrao IS NULL)
+                OR (CAST(:padrao AS varchar) IS NOT NULL AND LOWER(padrao) = LOWER(CAST(:padrao AS varchar)))
             """, nativeQuery = true)
     List<Tamanho> listarPorPadrao(@Param("padrao") String padrao);
 
@@ -22,8 +30,8 @@ public interface RepositorioPadraoTamanho extends JpaRepository<Tamanho, Long> {
     @Query(value = """
             SELECT t.id, t.padrao
               FROM app_luigarah.tamanhos t
-             WHERE (:padrao IS NULL AND t.padrao IS NULL)
-                OR (:padrao IS NOT NULL AND LOWER(t.padrao) = LOWER(:padrao))
+             WHERE (CAST(:padrao AS varchar) IS NULL AND t.padrao IS NULL)
+                OR (CAST(:padrao AS varchar) IS NOT NULL AND LOWER(t.padrao) = LOWER(CAST(:padrao AS varchar)))
             """, nativeQuery = true)
     List<Object[]> listarIdsEPadrao(@Param("padrao") String padrao);
 

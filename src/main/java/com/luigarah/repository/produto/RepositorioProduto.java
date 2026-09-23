@@ -14,14 +14,18 @@ import java.util.List;
 /**
  * Repositório de Produtos.
  *
- * Observações (Oracle):
- * - Para buscar em campos CLOB (descricao) usamos DBMS_LOB.SUBSTR.
- * - Funções NVL/GREATEST são usadas para tratar nulos e nunca deixar estoque negativo.
- * - MERGE é utilizado para "upsert" (criar ou atualizar) registros de estoque.
+ * Observações (PostgreSQL / Supabase):
+ * - As queries nativas não qualificam o schema (ex.: FROM produtos); o schema
+ *   app_luigarah é resolvido pelo search_path definido em
+ *   spring.datasource.hikari.connection-init-sql (application.properties).
+ * - Colunas longas (descricao, imagens...) são TEXT, então LOWER/LIKE funcionam direto.
+ * - COALESCE/GREATEST são usados para tratar nulos e nunca deixar estoque negativo.
+ * - INSERT ... ON CONFLICT é utilizado para "upsert" (criar ou atualizar) registros de estoque.
+ * - Parâmetros opcionais usam CAST(:param AS varchar) para o Postgres inferir o tipo quando nulos.
  *
  * Convenções:
  * - Métodos derivados de nomes (findBy...) usam JPQL/Criteria gerada pelo Spring.
- * - Métodos com @Query(nativeQuery=true) usam SQL Oracle diretamente quando
+ * - Métodos com @Query(nativeQuery=true) usam SQL nativo diretamente quando
  *   precisamos de JOINs/otimizações específicas.
  */
 @Repository
@@ -48,14 +52,15 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
     @Query(value = "SELECT qtd_estoque FROM produtos_estoque WHERE produto_id = :produtoId", nativeQuery = true)
     Integer obterEstoqueProduto(@Param("produtoId") Long produtoId);
 
-    /** Define (upsert) o estoque do produto. Se não existir cria, senão atualiza. */
+    /**
+     * Define (upsert) o estoque do produto. Se não existir cria, senão atualiza.
+     * ON CONFLICT usa a PK produtos_estoque(produto_id); EXCLUDED é a linha que seria inserida.
+     */
     @Modifying
     @Query(value = """
-        MERGE INTO produtos_estoque pe
-        USING (SELECT :produtoId AS produto_id, :qtd AS qtd FROM dual) x
-        ON (pe.produto_id = x.produto_id)
-        WHEN MATCHED THEN UPDATE SET pe.qtd_estoque = x.qtd
-        WHEN NOT MATCHED THEN INSERT (produto_id, qtd_estoque) VALUES (x.produto_id, x.qtd)
+        INSERT INTO produtos_estoque (produto_id, qtd_estoque)
+        VALUES (:produtoId, :qtd)
+        ON CONFLICT (produto_id) DO UPDATE SET qtd_estoque = EXCLUDED.qtd_estoque
         """, nativeQuery = true)
     void upsertEstoqueProduto(@Param("produtoId") Long produtoId, @Param("qtd") int qtd);
 
@@ -63,7 +68,7 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
     @Modifying
     @Query(value = """
         UPDATE produtos_estoque
-           SET qtd_estoque = GREATEST(0, NVL(qtd_estoque,0) + :delta)
+           SET qtd_estoque = GREATEST(0, COALESCE(qtd_estoque,0) + :delta)
          WHERE produto_id = :produtoId
         """, nativeQuery = true)
     int incrementarEstoqueProduto(@Param("produtoId") Long produtoId, @Param("delta") int delta);
@@ -77,20 +82,20 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
     Page<Produto> findByCategoriaAndSubtituloContainingIgnoreCase(
             String categoria, String subtitulo, Pageable pageable);
 
-    /** Busca "fulltext simples": título, autor e descrição (CLOB). */
+    /** Busca "fulltext simples": título, autor e descrição (TEXT). */
     @Query(value = """
             SELECT *
               FROM produtos p
              WHERE LOWER(p.titulo) LIKE '%' || :busca || '%'
                 OR LOWER(p.autor)  LIKE '%' || :busca || '%'
-                OR LOWER(DBMS_LOB.SUBSTR(p.descricao, 4000, 1)) LIKE '%' || :busca || '%'
+                OR LOWER(p.descricao) LIKE '%' || :busca || '%'
             """,
             countQuery = """
             SELECT COUNT(*)
               FROM produtos p
              WHERE LOWER(p.titulo) LIKE '%' || :busca || '%'
                 OR LOWER(p.autor)  LIKE '%' || :busca || '%'
-                OR LOWER(DBMS_LOB.SUBSTR(p.descricao, 4000, 1)) LIKE '%' || :busca || '%'
+                OR LOWER(p.descricao) LIKE '%' || :busca || '%'
             """,
             nativeQuery = true)
     Page<Produto> buscarPorTermoPesquisa(@Param("busca") String busca, Pageable pageable);
@@ -103,7 +108,7 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
                AND (
                      LOWER(p.titulo) LIKE '%' || :busca || '%'
                   OR LOWER(p.autor)  LIKE '%' || :busca || '%'
-                  OR LOWER(DBMS_LOB.SUBSTR(p.descricao, 4000, 1)) LIKE '%' || :busca || '%'
+                  OR LOWER(p.descricao) LIKE '%' || :busca || '%'
                )
             """,
             countQuery = """
@@ -113,7 +118,7 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
                AND (
                      LOWER(p.titulo) LIKE '%' || :busca || '%'
                   OR LOWER(p.autor)  LIKE '%' || :busca || '%'
-                  OR LOWER(DBMS_LOB.SUBSTR(p.descricao, 4000, 1)) LIKE '%' || :busca || '%'
+                  OR LOWER(p.descricao) LIKE '%' || :busca || '%'
                )
             """,
             nativeQuery = true)
@@ -155,9 +160,11 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
             SELECT t.etiqueta
               FROM tamanhos t
              WHERE t.categoria = :categoria
-               AND (:padrao IS NULL OR t.padrao = :padrao)
+               AND (CAST(:padrao AS varchar) IS NULL OR t.padrao = CAST(:padrao AS varchar))
              ORDER BY t.ordem NULLS FIRST, t.etiqueta
             """, nativeQuery = true)
+    // CAST(:padrao AS varchar): quando padrao é null o Hibernate envia o parâmetro sem tipo,
+    // e o PostgreSQL recusa "? IS NULL" sem saber o tipo. O CAST resolve.
     List<String> listarCatalogoEtiquetas(@Param("categoria") String categoria,
                                          @Param("padrao") String padrao);
 
@@ -173,7 +180,7 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
           JOIN tamanhos t          ON t.id = pt.tamanho_id
          WHERE p.categoria = :categoria
            AND UPPER(t.etiqueta) = UPPER(:etiqueta)
-           AND NVL(pt.qtd_estoque,0) > 0
+           AND COALESCE(pt.qtd_estoque,0) > 0
         """,
             countQuery = """
         SELECT COUNT(*)
@@ -182,7 +189,7 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
           JOIN tamanhos t          ON t.id = pt.tamanho_id
          WHERE p.categoria = :categoria
            AND UPPER(t.etiqueta) = UPPER(:etiqueta)
-           AND NVL(pt.qtd_estoque,0) > 0
+           AND COALESCE(pt.qtd_estoque,0) > 0
         """,
             nativeQuery = true)
     Page<Produto> buscarPorCategoriaETamanho(@Param("categoria") String categoria,
@@ -267,20 +274,14 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
      */
     @Modifying
     @Query(value = """
-            MERGE INTO produtos_tamanhos pt
-            USING (
-                SELECT :produtoId AS produto_id,
-                       t.id      AS tamanho_id,
-                       :qtd      AS qtd
-                  FROM tamanhos t
-                 WHERE t.etiqueta  = :etiqueta
-                   AND t.categoria = (SELECT categoria       FROM produtos WHERE id = :produtoId)
-                   AND t.padrao    = (SELECT padrao_tamanho  FROM produtos WHERE id = :produtoId)
-            ) x
-            ON (pt.produto_id = x.produto_id AND pt.tamanho_id = x.tamanho_id)
-            WHEN MATCHED THEN UPDATE SET pt.qtd_estoque = x.qtd
-            WHEN NOT MATCHED THEN INSERT (produto_id, tamanho_id, qtd_estoque)
-                 VALUES (x.produto_id, x.tamanho_id, x.qtd)
+            INSERT INTO produtos_tamanhos (produto_id, tamanho_id, qtd_estoque)
+            SELECT :produtoId, t.id, :qtd
+              FROM tamanhos t
+             WHERE t.etiqueta  = :etiqueta
+               AND t.categoria = (SELECT categoria       FROM produtos WHERE id = :produtoId)
+               AND t.padrao    = (SELECT padrao_tamanho  FROM produtos WHERE id = :produtoId)
+            ON CONFLICT (produto_id, tamanho_id) DO UPDATE SET qtd_estoque = EXCLUDED.qtd_estoque
+            -- ON CONFLICT usa a PK pk_produtos_tamanhos(produto_id, tamanho_id)
             """, nativeQuery = true)
     void upsertEstoquePorEtiqueta(@Param("produtoId") Long produtoId,
                                   @Param("etiqueta") String etiqueta,
@@ -292,8 +293,9 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
      */
     @Modifying
     @Query(value = """
+            -- No PostgreSQL a coluna do SET não pode ter o alias da tabela (pt.)
             UPDATE produtos_tamanhos pt
-               SET pt.qtd_estoque = GREATEST(0, NVL(pt.qtd_estoque,0) + :delta)
+               SET qtd_estoque = GREATEST(0, COALESCE(pt.qtd_estoque,0) + :delta)
              WHERE pt.produto_id = :produtoId
                AND pt.tamanho_id = (
                  SELECT id FROM tamanhos

@@ -1,8 +1,8 @@
 # 🛍️ Luigarah Backend - API RESTful
 
-[![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://www.oracle.com/java/)
+[![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://adoptium.net/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.0-green.svg)](https://spring.io/projects/spring-boot)
-[![Oracle](https://img.shields.io/badge/Oracle-ADB-red.svg)](https://www.oracle.com/autonomous-database/)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E.svg)](https://supabase.com/)
 [![Cloudflare R2](https://img.shields.io/badge/Cloudflare-R2-orange.svg)](https://www.cloudflare.com/products/r2/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Production](https://img.shields.io/badge/production-Render-blue.svg)](https://luigarah-backend.onrender.com)
@@ -12,6 +12,9 @@
 **🌐 Produção:** https://luigarah-backend.onrender.com  
 **📚 Documentação API:** https://luigarah-backend.onrender.com/swagger-ui/index.html  
 **🎨 Frontend:** https://luigarah.vercel.app
+
+> 🔄 **Setembro/2026 — banco migrado do Oracle para o Supabase.** O projeto usava Oracle Autonomous
+> Database; agora usa **Supabase (PostgreSQL 17)**. Detalhes em [Migração Oracle → Supabase](#-migração-oracle--supabase).
 
 ---
 
@@ -59,7 +62,7 @@ O **Luigarah Backend** é uma API RESTful robusta e escalável desenvolvida para
 - ✅ **Autenticação JWT** - Sistema completo com roles (USER/ADMIN)
 - ✅ **OAuth2 Social Login** - Google, Facebook, GitHub
 - ✅ **Segurança Avançada** - Spring Security + validação de senhas fortes (6-40 caracteres, maiúscula, minúscula, número e caractere especial)
-- ✅ **Banco Oracle Cloud** - Oracle Autonomous Database (ADB) Always Free
+- ✅ **Banco Supabase** - PostgreSQL gerenciado (schema `app_luigarah`)
 - ✅ **Upload de Imagens** - Cloudflare R2 (S3-compatible) em produção
 - ✅ **Storage Local** - Armazenamento em disco para desenvolvimento
 - ✅ **Documentação Automática** - Swagger/OpenAPI 3.0 completo
@@ -196,7 +199,7 @@ O projeto segue rigorosamente os princípios de **Clean Architecture** e **Domai
 
 | Tecnologia | Versão | Descrição |
 |------------|--------|-----------|
-| **Java** | 21 LTS | Linguagem principal (Oracle JDK) |
+| **Java** | 21 LTS | Linguagem principal (Eclipse Temurin na imagem Docker) |
 | **Maven** | 3.9+ | Gerenciamento de dependências e build |
 
 ### 📧 Sistema de Email (Brevo API)
@@ -292,19 +295,15 @@ Todos os e-mails seguem um design HTML responsivo e moderno:
 
 | Tecnologia | Versão | Função |
 |------------|--------|--------|
-| **Oracle JDBC** | 23.2.0.0 | Driver de conexão Oracle |
+| **PostgreSQL JDBC** | Gerenciado pelo Spring Boot | Driver de conexão com o Supabase |
 | **Hibernate** | 6.2+ | ORM (Object-Relational Mapping) |
 | **Flyway** | 9.22+ | Migração e versionamento do banco |
-| **Flyway Oracle** | 9.22+ | Suporte específico para Oracle |
 | **HikariCP** | 5.0+ | Pool de conexões (incluído no Spring Boot) |
+| **Embedded Postgres** | 2.1.0 (PG 16) | Testes de integração das migrations e queries nativas |
 
-### 🔒 Oracle Security (Wallet/TLS)
-
-| Biblioteca | Versão | Função |
-|------------|--------|--------|
-| **OraclePKI** | 21.11.0.0 | Suporte a PKI para wallet |
-| **OSDT Core** | 21.11.0.0 | Oracle Security Developer Tools |
-| **OSDT Cert** | 21.11.0.0 | Certificados SSL/TLS |
+> **Conexão com o Supabase:** use o *Session Pooler* (porta 5432), que funciona via IPv4
+> (a conexão direta `db.<ref>.supabase.co` é somente IPv6 e não funciona no Render).
+> As tabelas ficam no schema `app_luigarah`, fora da Data API do Supabase, e têm RLS ativado.
 
 ### 📸 Upload de Imagens e Storage
 
@@ -518,11 +517,9 @@ luigara-backend/
 ├── .idea/                                   # Configurações IntelliJ IDEA
 ├── .gitignore                               # Arquivos ignorados pelo Git
 ├── Dockerfile                               # Container Docker
-├── entrypoint.sh                            # Script de inicialização Docker
 ├── LICENSE                                  # Licença MIT
 ├── pom.xml                                  # Configuração Maven e dependências
 ├── README.md                                # Este arquivo
-├── ORACLE_ACL_FIX.md                        # Correção de ACL Oracle
 ├── SETUP_LOCAL.md                           # Guia de setup local
 ├── UPLOAD_IMAGES_GUIDE.md                   # 🆕 Guia de upload de imagens
 │
@@ -535,14 +532,13 @@ luigara-backend/
 │   │   │           │
 │   │   │           ├── config/                                # ⚙️ Configurações Globais
 │   │   │           │   ├── ConfiguracaoCors.java              # CORS para frontend
-│   │   │           │   ├── DotEnvConfig.java                  # Carregamento de variáveis .env
+│   │   │           │   ├── DotEnvConfig.java                  # Carrega o .env no profile local (DB_URL, ...)
 │   │   │           │   ├── FlywayRepairConfig.java            # Configuração Flyway
 │   │   │           │   ├── JacksonStringSanitizerConfig.java  # Sanitização JSON
 │   │   │           │   ├── JwtAuthenticationFilter.java       # Filtro JWT
 │   │   │           │   ├── JwtTokenProvider.java              # Geração/validação JWT
 │   │   │           │   ├── LocalStorageConfig.java            # 🆕 Config storage local
 │   │   │           │   ├── OpenApiConfig.java                 # Swagger/OpenAPI
-│   │   │           │   ├── OracleWalletConfig.java            # Config wallet Oracle
 │   │   │           │   ├── SecurityConfig.java                # Spring Security
 │   │   │           │   └── WebMvcConfig.java                  # 🆕 Config MVC e recursos estáticos
 │   │   │           │
@@ -730,15 +726,18 @@ luigara-backend/
 │   │       │   └── outros/                                    # Outras imagens
 │   │       └── db/
 │   │           └── migration/                                 # Migrações Flyway
-│   │               ├── V1__schema.sql                         # Schema inicial
-│   │               ├── V2__seed_tamanhos.sql                  # Seed tamanhos
-│   │               └── V3__data.sql                           # Dados iniciais
+│   │               ├── V1__schema.sql                         # Schema completo (PostgreSQL)
+│   │               ├── V2__seed_identidades_tamanhos.sql      # Identidades + catálogo de tamanhos
+│   │               ├── V3__seed_produtos.sql                  # 135 produtos (backup do Oracle)
+│   │               └── V4__seed_estoque_inicial.sql           # Estoque inicial (10 por tamanho)
 │   │
 │   └── test/                                                  # 🧪 Testes
 │       └── java/
 │           ├── TestCORS.java                                  # Teste CORS
 │           └── com/
 │               └── luigarah/
+│                   ├── repository/
+│                   │   └── RepositoriosPostgresTest.java      # Migrations + queries no PostgreSQL embarcado
 │                   └── service/
 │                       ├── PasswordTest.java                  # Teste de senhas
 │                       └── impl/
@@ -1298,6 +1297,104 @@ if (file.getSize() > 5 * 1024 * 1024) {
 
 ---
 
+## 🗄️ Banco de Dados
+
+O banco de dados é o **Supabase (PostgreSQL 17)**, região `sa-east-1` (São Paulo).
+Todas as tabelas ficam no schema **`app_luigarah`**, criado e versionado pelo **Flyway**.
+
+### 🔄 Migração Oracle → Supabase
+
+Até setembro/2026 o backend usava **Oracle Autonomous Database (Always Free)**, com conexão via wallet
+(TNS). O banco Oracle foi excluído e eu migrei o projeto para o **Supabase**.
+
+**O que foi recuperado:**
+
+| Dado | Origem |
+|------|--------|
+| 135 produtos (60 roupas, 49 sapatos, 26 bolsas) | Backup JSON da tabela `PRODUTOS` do Oracle → `V3__seed_produtos.sql` |
+| 4 identidades (homem, mulher, unissex, infantil) | Reconstruídas a partir da documentação da API → `V2` |
+| Catálogo de 29 tamanhos (BR, USA e sapatos 32–46) | Reconstruído a partir da documentação da API → `V2` |
+| Estoque | **Não havia backup**: 10 unidades por tamanho/bolsa (`V4`), ajustável pelo painel admin |
+| Usuários, endereços, carrinhos, listas de desejos | **Não recuperados**: os usuários precisam se cadastrar novamente |
+
+**Correções de dados feitas na importação:**
+- Produtos 93–151 tinham `imagens` e `destaques` gravados como arrays corrompidos (JSON dividido nas vírgulas); foram reconstruídos.
+- Produto 151 (sapato) estava sem `padrao_tamanho`; recebeu `br`, como os demais sapatos.
+
+**O que mudou no código:**
+
+| Antes (Oracle) | Agora (PostgreSQL / Supabase) |
+|----------------|-------------------------------|
+| `ojdbc11` + wallet (`oraclepki`, `osdt_*`) | `org.postgresql:postgresql` |
+| Wallet extraída no `entrypoint.sh` / `DotEnvConfig` | Conexão só com `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` |
+| Migrations em PL/SQL (triggers, `EXECUTE IMMEDIATE`) | Migrations em SQL PostgreSQL (`V1`–`V4`) |
+| `MERGE ... USING (SELECT ... FROM dual)` | `INSERT ... ON CONFLICT ... DO UPDATE` |
+| `NVL`, `DBMS_LOB.SUBSTR` | `COALESCE`, colunas `TEXT` |
+| `@Lob` nos campos longos de `Produto` | `@Column(columnDefinition = "text")` |
+| `NUMBER(1)` para booleanos | `BOOLEAN` |
+| `SELECT 1 FROM DUAL` (teste de conexão) | `Connection.isValid()` do driver |
+
+### 🔌 Conexão
+
+Use o **Session Pooler** do Supabase (painel → **Connect** → **Direct** → Type **JDBC** → Method **Session pooler**).
+A conexão direta (`db.<ref>.supabase.co`) é somente IPv6 e não funciona no Render.
+
+```properties
+DB_URL=jdbc:postgresql://aws-0-sa-east-1.pooler.supabase.com:5432/postgres?sslmode=require
+DB_USERNAME=postgres.<project-ref>
+DB_PASSWORD=<senha do banco>
+```
+
+- **Local:** coloque as variáveis no arquivo `.env` na raiz (carregado pelo `DotEnvConfig` no profile `local`).
+- **Produção (Render):** configure as mesmas variáveis em *Environment*.
+
+### 📋 Tabelas (schema `app_luigarah`)
+
+| Tabela | Conteúdo |
+|--------|----------|
+| `produtos` | Catálogo de produtos (textos longos em `TEXT`, `imagens`/`destaques` como JSON em texto) |
+| `identidades` | Identidades de produto (homem, mulher, unissex, infantil) |
+| `tamanhos` | Catálogo de tamanhos por `categoria` + `padrao` (usa, br, sapatos) |
+| `produtos_tamanhos` | Estoque por produto e tamanho (roupas e sapatos) |
+| `produtos_estoque` | Estoque consolidado (bolsas) |
+| `usuarios`, `enderecos`, `oauth_providers` | Contas, endereços e logins sociais |
+| `verification_tokens` | Códigos de verificação de e-mail e redefinição de senha |
+| `carrinho_itens`, `lista_desejo_itens` | Carrinho de compras e lista de desejos |
+
+Todas as tabelas têm **RLS ativado sem policies**: o backend conecta como dono das tabelas (não é afetado),
+mas qualquer acesso pela Data API pública do Supabase é bloqueado.
+
+### 🧬 Migrations (Flyway)
+
+| Arquivo | Conteúdo |
+|---------|----------|
+| `V1__schema.sql` | Schema completo: tabelas, sequences, índices, constraints e RLS |
+| `V2__seed_identidades_tamanhos.sql` | Identidades e catálogo de tamanhos |
+| `V3__seed_produtos.sql` | 135 produtos restaurados do backup |
+| `V4__seed_estoque_inicial.sql` | Estoque inicial (10 unidades) |
+
+> ⚠️ Nunca edite uma migration já aplicada — o Flyway valida o checksum e a aplicação não sobe.
+> Para mudar o banco, crie um novo arquivo `V5__descricao.sql`.
+
+### 👑 Criando um administrador
+
+Cadastre-se normalmente pelo site e promova a conta no **SQL Editor** do Supabase:
+
+```sql
+UPDATE app_luigarah.usuarios SET role = 'ADMIN' WHERE email = 'seu@email.com';
+```
+
+### 🧪 Testes do banco
+
+`RepositoriosPostgresTest` sobe um **PostgreSQL embarcado** (sem Docker), aplica as migrations, valida o
+mapeamento das entidades (`ddl-auto=validate`) e executa as queries nativas dos repositórios:
+
+```bash
+mvn test
+```
+
+---
+
 ## 📸 Sistema de Upload de Imagens
 
 O sistema de upload de imagens foi projetado para ser **flexível e escalável**, funcionando localmente em desenvolvimento e em nuvem (Cloudflare R2) em produção.
@@ -1438,13 +1535,13 @@ aws.credentials.accessKey=${AWS_ACCESS_KEY_ID:}
 aws.credentials.secretKey=${AWS_SECRET_ACCESS_KEY:}
 ```
 
-**application-prod.properties:**
+**Banco de dados (application.properties):**
 ```properties
-# Apenas configurações de banco Oracle (sem redundância de storage)
-spring.datasource.driver-class-name=oracle.jdbc.OracleDriver
-spring.datasource.url=jdbc:oracle:thin:@luigarah_tp
-spring.datasource.username=${ORACLE_USERNAME}
-spring.datasource.password=${ORACLE_PASSWORD}
+# Supabase - Session Pooler (Project Settings > Database > Connection string > JDBC)
+spring.datasource.url=${DB_URL}           # jdbc:postgresql://aws-0-<regiao>.pooler.supabase.com:5432/postgres?sslmode=require
+spring.datasource.username=${DB_USERNAME} # postgres.<project-ref>
+spring.datasource.password=${DB_PASSWORD}
+spring.datasource.hikari.connection-init-sql=SET search_path TO app_luigarah, public
 ```
 
 ### 🧪 Testando o Sistema

@@ -1,142 +1,202 @@
-﻿ALTER SESSION SET CURRENT_SCHEMA = APP_LUIGARAH;
+-- ============================================================
+-- V1 - Schema completo (PostgreSQL / Supabase)
+-- Baseline reconstruida a partir das entidades JPA e do backup de PRODUTOS
+-- do Oracle ADB. As migrations Oracle antigas estao em db/legacy-oracle.
+--
+-- O Flyway executa com search_path = app_luigarah
+-- (spring.flyway.default-schema), por isso os nomes nao sao qualificados.
+-- ============================================================
 
 --------------------------
--- Tabelas
+-- Sequences (nomes usados pelos @SequenceGenerator das entidades)
 --------------------------
-BEGIN EXECUTE IMMEDIATE 'DROP TABLE produtos_tamanhos CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
-/
-BEGIN EXECUTE IMMEDIATE 'DROP TABLE produtos_estoque  CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
-/
-BEGIN EXECUTE IMMEDIATE 'DROP TABLE tamanhos          CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
-/
-BEGIN EXECUTE IMMEDIATE 'DROP TABLE produtos          CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
-/
+CREATE SEQUENCE identidade_seq         START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE produtos_seq           START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE usuarios_seq           START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE enderecos_seq          START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE oauth_providers_seq    START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE carrinho_itens_seq     START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE lista_desejo_itens_seq START WITH 1 INCREMENT BY 1;
 
-CREATE TABLE produtos (
-                          id              NUMBER PRIMARY KEY,
-                          titulo          VARCHAR2(255) NOT NULL,
-                          subtitulo       VARCHAR2(255) NOT NULL,
-                          autor           VARCHAR2(255) NOT NULL,
-                          descricao       CLOB          NOT NULL,
-                          preco           NUMBER(10,2)  NOT NULL,
-                          dimensao        VARCHAR2(100) NOT NULL,
-                          imagem          CLOB          NOT NULL,
-                          imagem_hover    CLOB,
-                          imagens         CLOB,
-                          composicao      CLOB          NOT NULL,
-                          destaques       CLOB,
-                          categoria       VARCHAR2(50)  NOT NULL CHECK (categoria IN ('bolsas','roupas','sapatos')),
-                          modelo          CLOB,
-                          data_criacao    TIMESTAMP DEFAULT SYSTIMESTAMP,
-                          data_atualizacao TIMESTAMP DEFAULT SYSTIMESTAMP
+--------------------------
+-- Identidades (homem, mulher, unissex, infantil)
+--------------------------
+CREATE TABLE identidades (
+    id               BIGINT       PRIMARY KEY DEFAULT nextval('identidade_seq'),
+    codigo           VARCHAR(50)  NOT NULL UNIQUE,
+    nome             VARCHAR(100) NOT NULL,
+    ordem            INTEGER,
+    ativo            VARCHAR(1)   DEFAULT 'S' CHECK (ativo IN ('S', 'N')),
+    data_criacao     TIMESTAMP    NOT NULL DEFAULT now(),
+    data_atualizacao TIMESTAMP
 );
+ALTER SEQUENCE identidade_seq OWNED BY identidades.id;
 
-CREATE INDEX idx_produtos_categoria ON produtos(categoria);
-CREATE INDEX idx_produtos_titulo    ON produtos(titulo);
-CREATE INDEX idx_produtos_autor     ON produtos(autor);
+--------------------------
+-- Produtos
+--------------------------
+CREATE TABLE produtos (
+    id               BIGINT         PRIMARY KEY DEFAULT nextval('produtos_seq'),
+    titulo           VARCHAR(255)   NOT NULL,
+    subtitulo        VARCHAR(255)   NOT NULL,
+    autor            VARCHAR(255)   NOT NULL,
+    descricao        TEXT           NOT NULL,
+    preco            NUMERIC(19, 2) NOT NULL,
+    dimensao         VARCHAR(100)   NOT NULL,
+    imagem           TEXT           NOT NULL,
+    imagem_hover     TEXT,
+    imagens          TEXT,
+    composicao       TEXT           NOT NULL,
+    destaques        TEXT,
+    categoria        VARCHAR(50)    NOT NULL CHECK (categoria IN ('bolsas', 'roupas', 'sapatos')),
+    modelo           TEXT,
+    padrao_tamanho   VARCHAR(10)    CHECK (padrao_tamanho IN ('usa', 'br', 'sapatos')),
+    identidade_id    BIGINT         REFERENCES identidades (id) ON DELETE SET NULL,
+    data_criacao     TIMESTAMP      NOT NULL DEFAULT now(),
+    data_atualizacao TIMESTAMP      NOT NULL DEFAULT now()
+);
+ALTER SEQUENCE produtos_seq OWNED BY produtos.id;
 
+CREATE INDEX idx_produtos_categoria  ON produtos (categoria);
+CREATE INDEX idx_produtos_titulo     ON produtos (titulo);
+CREATE INDEX idx_produtos_autor      ON produtos (autor);
+CREATE INDEX idx_produtos_identidade ON produtos (identidade_id);
+
+--------------------------
+-- Catalogo de tamanhos
+--------------------------
 CREATE TABLE tamanhos (
-                          id        NUMBER       PRIMARY KEY,
-                          categoria VARCHAR2(50) NOT NULL CHECK (categoria IN ('roupas','sapatos')),
-                          etiqueta  VARCHAR2(10) NOT NULL,
-                          ordem     NUMBER NULL,
-                          CONSTRAINT uq_tamanho_cat UNIQUE (categoria, etiqueta)
+    id        BIGINT      GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    categoria VARCHAR(20) NOT NULL CHECK (categoria IN ('roupas', 'sapatos')),
+    etiqueta  VARCHAR(40) NOT NULL,
+    padrao    VARCHAR(10) NOT NULL CHECK (padrao IN ('usa', 'br', 'sapatos')),
+    ordem     INTEGER,
+    CONSTRAINT uq_tamanho_cat_padrao UNIQUE (categoria, padrao, etiqueta)
 );
 
 CREATE TABLE produtos_tamanhos (
-                                   produto_id  NUMBER NOT NULL,
-                                   tamanho_id  NUMBER NOT NULL,
-                                   qtd_estoque NUMBER DEFAULT 0 NOT NULL,
-                                   CONSTRAINT pk_produtos_tamanhos PRIMARY KEY (produto_id, tamanho_id),
-                                   CONSTRAINT fk_pt_produto FOREIGN KEY (produto_id) REFERENCES produtos(id) ON DELETE CASCADE,
-                                   CONSTRAINT fk_pt_tamanho FOREIGN KEY (tamanho_id) REFERENCES tamanhos(id) ON DELETE CASCADE
+    produto_id  BIGINT  NOT NULL REFERENCES produtos (id) ON DELETE CASCADE,
+    tamanho_id  BIGINT  NOT NULL REFERENCES tamanhos (id) ON DELETE CASCADE,
+    qtd_estoque INTEGER NOT NULL DEFAULT 0,
+    CONSTRAINT pk_produtos_tamanhos PRIMARY KEY (produto_id, tamanho_id)
 );
+CREATE INDEX idx_pt_tamanho ON produtos_tamanhos (tamanho_id);
 
-CREATE INDEX idx_pt_produto ON produtos_tamanhos(produto_id);
-CREATE INDEX idx_pt_tamanho ON produtos_tamanhos(tamanho_id);
-
+-- Estoque consolidado (bolsas / produtos sem tamanho)
 CREATE TABLE produtos_estoque (
-                                  produto_id  NUMBER      NOT NULL,
-                                  qtd_estoque NUMBER(10)  DEFAULT 0 NOT NULL,
-                                  CONSTRAINT pk_produtos_estoque PRIMARY KEY (produto_id),
-                                  CONSTRAINT fk_pe_prod FOREIGN KEY (produto_id) REFERENCES produtos(id) ON DELETE CASCADE
+    produto_id  BIGINT  PRIMARY KEY REFERENCES produtos (id) ON DELETE CASCADE,
+    qtd_estoque INTEGER NOT NULL DEFAULT 0
 );
 
 --------------------------
--- Sequences
+-- Usuarios e autenticacao
 --------------------------
-BEGIN EXECUTE IMMEDIATE 'DROP SEQUENCE produtos_seq'; EXCEPTION WHEN OTHERS THEN NULL; END;
-/
-BEGIN EXECUTE IMMEDIATE 'DROP SEQUENCE tamanhos_seq'; EXCEPTION WHEN OTHERS THEN NULL; END;
-/
+CREATE TABLE usuarios (
+    id               BIGINT       PRIMARY KEY DEFAULT nextval('usuarios_seq'),
+    nome             VARCHAR(100) NOT NULL,
+    sobrenome        VARCHAR(100),
+    email            VARCHAR(255) NOT NULL UNIQUE,
+    senha            VARCHAR(255),
+    telefone         VARCHAR(20),
+    data_nascimento  DATE,
+    genero           VARCHAR(20),
+    foto_perfil      VARCHAR(500),
+    role             VARCHAR(20)  NOT NULL DEFAULT 'USER' CHECK (role IN ('USER', 'ADMIN')),
+    ativo            BOOLEAN      NOT NULL DEFAULT TRUE,
+    email_verificado BOOLEAN      NOT NULL DEFAULT FALSE,
+    provider         VARCHAR(20)  CHECK (provider IN ('LOCAL', 'GOOGLE', 'FACEBOOK', 'GITHUB')),
+    provider_id      VARCHAR(255),
+    data_criacao     TIMESTAMP    NOT NULL DEFAULT now(),
+    data_atualizacao TIMESTAMP,
+    ultimo_acesso    TIMESTAMP
+);
+ALTER SEQUENCE usuarios_seq OWNED BY usuarios.id;
 
-CREATE SEQUENCE produtos_seq START WITH 1 INCREMENT BY 1 NOCACHE;
-CREATE SEQUENCE tamanhos_seq START WITH 1 INCREMENT BY 1 NOCACHE;
+CREATE TABLE oauth_providers (
+    id          BIGINT       PRIMARY KEY DEFAULT nextval('oauth_providers_seq'),
+    usuario_id  BIGINT       NOT NULL REFERENCES usuarios (id) ON DELETE CASCADE,
+    provider    VARCHAR(50)  NOT NULL,
+    provider_id VARCHAR(255),
+    created_at  TIMESTAMP    NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMP,
+    CONSTRAINT uq_oauth_usuario_provider UNIQUE (usuario_id, provider)
+);
+ALTER SEQUENCE oauth_providers_seq OWNED BY oauth_providers.id;
+
+CREATE TABLE enderecos (
+    id               BIGINT       PRIMARY KEY DEFAULT nextval('enderecos_seq'),
+    usuario_id       BIGINT       NOT NULL REFERENCES usuarios (id) ON DELETE CASCADE,
+    pais             VARCHAR(100) NOT NULL,
+    estado           VARCHAR(100) NOT NULL,
+    cidade           VARCHAR(100) NOT NULL,
+    cep              VARCHAR(20)  NOT NULL,
+    bairro           VARCHAR(200),
+    rua              VARCHAR(300),
+    numero           VARCHAR(20),
+    complemento      VARCHAR(200),
+    principal        BOOLEAN      NOT NULL DEFAULT FALSE,
+    data_criacao     TIMESTAMP    NOT NULL DEFAULT now(),
+    data_atualizacao TIMESTAMP
+);
+ALTER SEQUENCE enderecos_seq OWNED BY enderecos.id;
+CREATE INDEX idx_enderecos_usuario ON enderecos (usuario_id);
+
+CREATE TABLE verification_tokens (
+    id        BIGINT       GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    codigo    VARCHAR(6)   NOT NULL,
+    token     VARCHAR(500) NOT NULL UNIQUE,
+    email     VARCHAR(255) NOT NULL,
+    tipo      VARCHAR(50)  NOT NULL CHECK (tipo IN ('VERIFICACAO_EMAIL', 'RESET_SENHA')),
+    criado_em TIMESTAMP    NOT NULL,
+    expira_em TIMESTAMP    NOT NULL,
+    usado     BOOLEAN      NOT NULL DEFAULT FALSE,
+    usado_em  TIMESTAMP
+);
+CREATE INDEX idx_vtoken_codigo     ON verification_tokens (codigo);
+CREATE INDEX idx_vtoken_email_tipo ON verification_tokens (email, tipo);
+CREATE INDEX idx_vtoken_expira_em  ON verification_tokens (expira_em);
 
 --------------------------
--- Triggers
+-- Carrinho e lista de desejos
 --------------------------
-CREATE OR REPLACE TRIGGER produtos_bi
-BEFORE INSERT ON produtos
-FOR EACH ROW
-BEGIN
-  IF :NEW.id IS NULL THEN
-SELECT produtos_seq.NEXTVAL INTO :NEW.id FROM dual;
-END IF;
-  :NEW.data_criacao     := SYSTIMESTAMP;
-  :NEW.data_atualizacao := SYSTIMESTAMP;
-END;
-/
+CREATE TABLE carrinho_itens (
+    id               BIGINT    PRIMARY KEY DEFAULT nextval('carrinho_itens_seq'),
+    usuario_id       BIGINT    NOT NULL REFERENCES usuarios (id) ON DELETE CASCADE,
+    produto_id       BIGINT    NOT NULL REFERENCES produtos (id) ON DELETE CASCADE,
+    tamanho_id       BIGINT    REFERENCES tamanhos (id) ON DELETE CASCADE,
+    quantidade       INTEGER   NOT NULL CHECK (quantidade BETWEEN 1 AND 99),
+    data_adicao      TIMESTAMP NOT NULL DEFAULT now(),
+    data_atualizacao TIMESTAMP,
+    -- NULLS NOT DISTINCT (PG 15+) reproduz o comportamento do Oracle para bolsas (tamanho_id NULL)
+    CONSTRAINT uq_carrinho_usuario_produto_tamanho
+        UNIQUE NULLS NOT DISTINCT (usuario_id, produto_id, tamanho_id)
+);
+ALTER SEQUENCE carrinho_itens_seq OWNED BY carrinho_itens.id;
+CREATE INDEX idx_carrinho_produto ON carrinho_itens (produto_id);
 
-CREATE OR REPLACE TRIGGER tamanhos_bi
-BEFORE INSERT ON tamanhos
-FOR EACH ROW
-BEGIN
-  IF :NEW.id IS NULL THEN
-SELECT tamanhos_seq.NEXTVAL INTO :NEW.id FROM dual;
-END IF;
-END;
-/
-
--- Validacao de etiquetas por categoria
-CREATE OR REPLACE TRIGGER tamanhos_valida_etiqueta
-BEFORE INSERT OR UPDATE ON tamanhos
-                            FOR EACH ROW
-DECLARE v_num NUMBER;
-BEGIN
-  IF :NEW.categoria = 'roupas' THEN
-    IF :NEW.etiqueta NOT IN ('XXXS','XXS','XS','S','M','L','XL') THEN
-      RAISE_APPLICATION_ERROR(-20001,'Etiqueta invÃ¡lida para roupas.');
-END IF;
-  ELSIF :NEW.categoria = 'sapatos' THEN
-SELECT CASE WHEN REGEXP_LIKE(:NEW.etiqueta,'^\d+$') THEN 1 ELSE 0 END INTO v_num FROM dual;
-IF v_num = 0 OR TO_NUMBER(:NEW.etiqueta) < 32 OR TO_NUMBER(:NEW.etiqueta) > 46 THEN
-      RAISE_APPLICATION_ERROR(-20002,'Sapatos: use 32..46.');
-END IF;
-END IF;
-END;
-/
+CREATE TABLE lista_desejo_itens (
+    id          BIGINT    PRIMARY KEY DEFAULT nextval('lista_desejo_itens_seq'),
+    usuario_id  BIGINT    NOT NULL REFERENCES usuarios (id) ON DELETE CASCADE,
+    produto_id  BIGINT    NOT NULL REFERENCES produtos (id) ON DELETE CASCADE,
+    data_adicao TIMESTAMP NOT NULL DEFAULT now(),
+    CONSTRAINT uq_lista_desejo_usuario_produto UNIQUE (usuario_id, produto_id)
+);
+ALTER SEQUENCE lista_desejo_itens_seq OWNED BY lista_desejo_itens.id;
+CREATE INDEX idx_lista_desejo_produto ON lista_desejo_itens (produto_id);
 
 --------------------------
--- View de catalogo
+-- Seguranca Supabase: o backend conecta como dono das tabelas (ignora RLS).
+-- RLS sem policies bloqueia qualquer acesso via Data API (anon/authenticated)
+-- caso este schema venha a ser exposto no painel.
 --------------------------
-BEGIN EXECUTE IMMEDIATE 'DROP VIEW vw_produtos_com_tamanhos'; EXCEPTION WHEN OTHERS THEN NULL; END;
-/
-CREATE OR REPLACE VIEW vw_produtos_com_tamanhos AS
-SELECT
-    p.id, p.titulo, p.subtitulo, p.categoria,
-    LISTAGG(tt.etiqueta, ',') WITHIN GROUP (ORDER BY tt.ord) AS tamanhos
-FROM produtos p
-    LEFT JOIN (
-    SELECT pt.produto_id, t.etiqueta,
-    CASE
-    WHEN t.categoria='sapatos' THEN TO_NUMBER(t.etiqueta)
-    WHEN t.etiqueta='XXXS' THEN 1 WHEN t.etiqueta='XXS' THEN 2 WHEN t.etiqueta='XS' THEN 3
-    WHEN t.etiqueta='S' THEN 4 WHEN t.etiqueta='M' THEN 5 WHEN t.etiqueta='L' THEN 6
-    WHEN t.etiqueta='XL' THEN 7 ELSE 9999
-    END ord
-    FROM produtos_tamanhos pt
-    JOIN tamanhos t ON t.id = pt.tamanho_id
-    ) tt ON tt.produto_id = p.id
-GROUP BY p.id, p.titulo, p.subtitulo, p.categoria;
-
+ALTER TABLE identidades         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE produtos            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tamanhos            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE produtos_tamanhos   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE produtos_estoque    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE usuarios            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE oauth_providers     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE enderecos           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE verification_tokens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE carrinho_itens      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE lista_desejo_itens  ENABLE ROW LEVEL SECURITY;
