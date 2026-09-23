@@ -3,6 +3,7 @@ package com.luigarah.dto.produto;
 import com.luigarah.dto.identidade.IdentidadeDTO;
 import jakarta.validation.constraints.*;
 import io.swagger.v3.oas.annotations.media.Schema;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonRawValue;
 
 import java.math.BigDecimal;
@@ -94,6 +95,17 @@ public class ProdutoDTO {
 
     @Schema(description = "Identidade do produto (Masculino, Feminino, Unissex, Infantil)")
     private IdentidadeDTO identidade;
+
+    /**
+     * Padrão de tamanhos (coluna PADRAO_TAMANHO): usa, br, sapatos ou null.
+     * Somente leitura: o nome difere de Produto.padraoTamanho de propósito, para que o
+     * BeanUtils.copyProperties do controller não sobrescreva o padrão ao salvar o produto.
+     * Para alterar o padrão use /api/padroes-tamanho.
+     */
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @Schema(description = "Padrão de tamanhos do produto (somente leitura)", example = "br",
+            allowableValues = {"usa", "br", "sapatos"}, nullable = true)
+    private String padrao;
 
     public ProdutoDTO() {}
 
@@ -196,4 +208,7 @@ public class ProdutoDTO {
 
     public IdentidadeDTO getIdentidade() { return identidade; }
     public void setIdentidade(IdentidadeDTO identidade) { this.identidade = identidade; }
+
+    public String getPadrao() { return padrao; }
+    public void setPadrao(String padrao) { this.padrao = padrao; }
 }

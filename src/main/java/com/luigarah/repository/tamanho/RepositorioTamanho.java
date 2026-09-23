@@ -27,13 +27,15 @@ public interface RepositorioTamanho extends JpaRepository<Tamanho, Long> {
     List<Tamanho> findByCategoriaAndPadraoOrder(@Param("categoria") String categoria,
                                                 @Param("padrao") String padrao);
 
-    // Somente etiquetas (ordenadas)
+    // Somente etiquetas, sem repetição (sem padrão: USA primeiro, depois BR)
     @Query(value = """
             SELECT t.etiqueta
               FROM tamanhos t
              WHERE t.categoria = :categoria
                AND (CAST(:padrao AS varchar) IS NULL OR t.padrao = CAST(:padrao AS varchar))
-             ORDER BY t.ordem NULLS FIRST, t.etiqueta
+             GROUP BY t.etiqueta
+             ORDER BY MIN(CASE t.padrao WHEN 'usa' THEN 0 WHEN 'br' THEN 100 ELSE 200 END
+                          + COALESCE(t.ordem, 0)), t.etiqueta
             """, nativeQuery = true)
     List<String> listarEtiquetas(@Param("categoria") String categoria,
                                  @Param("padrao") String padrao);

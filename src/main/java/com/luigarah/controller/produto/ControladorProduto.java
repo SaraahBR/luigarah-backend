@@ -729,6 +729,8 @@ public class ControladorProduto implements ProdutoControllerDoc {
     private ProdutoDTO converterParaDTO(Produto produto) {
         ProdutoDTO dto = new ProdutoDTO();
         BeanUtils.copyProperties(produto, dto);
+        // padraoTamanho (entidade) -> padrao (DTO): nomes diferentes, o copyProperties não copia
+        dto.setPadrao(produto.getPadraoTamanho());
         dto.setImagens(JsonStringCleaner.clean(dto.getImagens()));
         dto.setDestaques(JsonStringCleaner.clean(dto.getDestaques()));
         dto.setModelo(JsonStringCleaner.clean(dto.getModelo()));

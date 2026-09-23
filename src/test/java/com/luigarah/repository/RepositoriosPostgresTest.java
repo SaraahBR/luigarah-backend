@@ -15,6 +15,7 @@ import com.luigarah.repository.tamanho.RepositorioTamanho;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -73,6 +74,7 @@ class RepositoriosPostgresTest {
     @Autowired UsuarioRepository repoUsuario;
     @Autowired CarrinhoItemRepository repoCarrinho;
     @Autowired VerificationTokenRepository repoToken;
+    @Autowired EntityManager entityManager;
 
     private static final long BOLSA_ID = 1L;   // Gucci / Tiracolo
     private static final long ROUPA_BR_ID = 15L;   // MARANT ÉTOILE / Colete (padrão br)
@@ -87,8 +89,37 @@ class RepositoriosPostgresTest {
     void deveCarregarSeeds() {
         assertEquals(135, repoProduto.count());
         assertEquals(4, repoIdentidade.count());
-        assertEquals(29, repoTamanho.count());
+        assertEquals(33, repoTamanho.count()); // 29 da V2 + XXL, XXXL, 30 e 31 da V5
         assertEquals(26, repoProduto.countByCategoria("bolsas"));
+    }
+
+    @Test
+    @DisplayName("V5 deve sortear os tamanhos novos só para produtos compatíveis")
+    void deveSortearTamanhosNovosSoParaProdutosCompativeis() {
+        // Cada linha: categoria, padrão do produto, etiqueta, estoque
+        List<Object[]> vinculos = entityManager.createNativeQuery("""
+                SELECT p.categoria, p.padrao_tamanho, t.etiqueta, pt.qtd_estoque
+                  FROM produtos_tamanhos pt
+                  JOIN produtos p ON p.id = pt.produto_id
+                  JOIN tamanhos t ON t.id = pt.tamanho_id
+                 WHERE t.etiqueta IN ('XXL', 'XXXL', '30', '31')
+                """).getResultList();
+
+        assertFalse(vinculos.isEmpty());
+        for (Object[] v : vinculos) {
+            String categoria = (String) v[0], padrao = (String) v[1], etiqueta = (String) v[2];
+            int qtd = ((Number) v[3]).intValue();
+            if (etiqueta.startsWith("X")) {
+                assertEquals("roupas", categoria);
+                assertEquals("usa", padrao);
+            } else {
+                assertEquals("sapatos", categoria);
+            }
+            assertTrue(qtd >= 1 && qtd <= 15, "estoque fora do intervalo: " + qtd);
+        }
+        // Sorteio: nem todos os produtos elegíveis recebem os tamanhos novos
+        long sapatosCom30 = vinculos.stream().filter(v -> "30".equals(v[2])).count();
+        assertTrue(sapatosCom30 > 0 && sapatosCom30 < 49, "sapatos com 30: " + sapatosCom30);
     }
 
     @Test
@@ -114,9 +145,12 @@ class RepositoriosPostgresTest {
     @Test
     @DisplayName("Deve listar catálogo com padrão nulo e informado")
     void deveListarCatalogo() {
-        assertEquals(14, repoProduto.listarCatalogoEtiquetas("roupas", null).size());
+        // Sem padrão: USA (XXXS..XXXL) e depois BR, sem repetir o "M"
+        assertEquals(List.of("XXXS", "XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL", "PP", "P", "G", "XG", "G1", "G2"),
+                repoProduto.listarCatalogoEtiquetas("roupas"));
+        assertEquals(15, repoProduto.listarCatalogoEtiquetas("roupas", null).size());
         assertEquals(List.of("PP", "P", "M", "G", "XG", "G1", "G2"), repoTamanho.listarEtiquetas("roupas", "br"));
-        assertEquals(15, repoTamanho.findByCategoriaAndPadraoOrder("sapatos", null).size());
+        assertEquals(17, repoTamanho.findByCategoriaAndPadraoOrder("sapatos", null).size()); // 30 a 46
         assertEquals(1, repoTamanho.existsEtiqueta("sapatos", "br", "38"));
     }
 
@@ -132,7 +166,7 @@ class RepositoriosPostgresTest {
     void deveListarPorPadrao() {
         assertEquals(26, repoPadraoProduto.listarPorPadrao(null).size());
         assertFalse(repoPadraoProduto.listarIdsEPadrao("BR").isEmpty());
-        assertEquals(7, repoPadraoTamanho.listarPorPadrao("usa").size());
+        assertEquals(9, repoPadraoTamanho.listarPorPadrao("usa").size());
         assertTrue(repoPadraoTamanho.listarPorPadrao(null).isEmpty());
     }
 

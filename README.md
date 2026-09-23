@@ -729,7 +729,8 @@ luigara-backend/
 │   │               ├── V1__schema.sql                         # Schema completo (PostgreSQL)
 │   │               ├── V2__seed_identidades_tamanhos.sql      # Identidades + catálogo de tamanhos
 │   │               ├── V3__seed_produtos.sql                  # 135 produtos (backup do Oracle)
-│   │               └── V4__seed_estoque_inicial.sql           # Estoque inicial (10 por tamanho)
+│   │               ├── V4__seed_estoque_inicial.sql           # Estoque inicial (10 por tamanho)
+│   │               └── V5__novos_tamanhos_usa_e_sapatos.sql   # XXL/XXXL (USA) e 30/31 (sapatos)
 │   │
 │   └── test/                                                  # 🧪 Testes
 │       └── java/
@@ -1313,7 +1314,7 @@ Até setembro/2026 o backend usava **Oracle Autonomous Database (Always Free)**,
 |------|--------|
 | 135 produtos (60 roupas, 49 sapatos, 26 bolsas) | Backup JSON da tabela `PRODUTOS` do Oracle → `V3__seed_produtos.sql` |
 | 4 identidades (homem, mulher, unissex, infantil) | Reconstruídas a partir da documentação da API → `V2` |
-| Catálogo de 29 tamanhos (BR, USA e sapatos 32–46) | Reconstruído a partir da documentação da API → `V2` |
+| Catálogo de 33 tamanhos (BR PP–G2, USA XXXS–XXXL e sapatos 30–46) | Reconstruído a partir da documentação da API e do frontend → `V2` e `V5` |
 | Estoque | **Não havia backup**: 10 unidades por tamanho/bolsa (`V4`), ajustável pelo painel admin |
 | Usuários, endereços, carrinhos, listas de desejos | **Não recuperados**: os usuários precisam se cadastrar novamente |
 
@@ -1372,6 +1373,7 @@ mas qualquer acesso pela Data API pública do Supabase é bloqueado.
 | `V2__seed_identidades_tamanhos.sql` | Identidades e catálogo de tamanhos |
 | `V3__seed_produtos.sql` | 135 produtos restaurados do backup |
 | `V4__seed_estoque_inicial.sql` | Estoque inicial (10 unidades) |
+| `V5__novos_tamanhos_usa_e_sapatos.sql` | Acrescenta XXL/XXXL (USA) e 30/31 (sapatos) e sorteia esses tamanhos, com estoque de 1 a 15, entre os produtos compatíveis |
 
 > ⚠️ Nunca edite uma migration já aplicada — o Flyway valida o checksum e a aplicação não sobe.
 > Para mudar o banco, crie um novo arquivo `V5__descricao.sql`.

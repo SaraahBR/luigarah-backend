@@ -60,6 +60,7 @@ public class ProdutoMapper {
         dto.setDestaques(produto.getDestaques());
         dto.setCategoria(produto.getCategoria());
         dto.setModelo(produto.getModelo());
+        dto.setPadrao(produto.getPadraoTamanho());
         dto.setDataCriacao(produto.getDataCriacao());
         dto.setDataAtualizacao(produto.getDataAtualizacao());
 

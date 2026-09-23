@@ -143,6 +143,12 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
     // CATÁLOGO DE TAMANHOS
     // ---------------------------------------------------------------------
 
+    /*
+     * Catálogo de etiquetas (usado nos filtros do site). Sem padrão, a categoria "roupas"
+     * traz USA e BR juntos: o GROUP BY remove etiquetas repetidas (ex.: "M" existe nos dois)
+     * e a ordenação lista primeiro USA, depois BR, cada um na ordem do catálogo.
+     */
+
     /**
      * LEGADO: Lista catálogo por categoria (sem filtrar padrao).
      * Mantido para compatibilidade. Prefira o método com parâmetro padrao.
@@ -151,7 +157,9 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
             SELECT t.etiqueta
               FROM tamanhos t
              WHERE t.categoria = :categoria
-             ORDER BY t.ordem NULLS FIRST, t.etiqueta
+             GROUP BY t.etiqueta
+             ORDER BY MIN(CASE t.padrao WHEN 'usa' THEN 0 WHEN 'br' THEN 100 ELSE 200 END
+                          + COALESCE(t.ordem, 0)), t.etiqueta
             """, nativeQuery = true)
     List<String> listarCatalogoEtiquetas(@Param("categoria") String categoria);
 
@@ -161,7 +169,9 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
               FROM tamanhos t
              WHERE t.categoria = :categoria
                AND (CAST(:padrao AS varchar) IS NULL OR t.padrao = CAST(:padrao AS varchar))
-             ORDER BY t.ordem NULLS FIRST, t.etiqueta
+             GROUP BY t.etiqueta
+             ORDER BY MIN(CASE t.padrao WHEN 'usa' THEN 0 WHEN 'br' THEN 100 ELSE 200 END
+                          + COALESCE(t.ordem, 0)), t.etiqueta
             """, nativeQuery = true)
     // CAST(:padrao AS varchar): quando padrao é null o Hibernate envia o parâmetro sem tipo,
     // e o PostgreSQL recusa "? IS NULL" sem saber o tipo. O CAST resolve.
