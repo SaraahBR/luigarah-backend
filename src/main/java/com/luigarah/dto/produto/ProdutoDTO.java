@@ -107,6 +107,14 @@ public class ProdutoDTO {
             allowableValues = {"usa", "br", "sapatos"}, nullable = true)
     private String padrao;
 
+    /**
+     * Tipo do produto traduzido para o idioma pedido (Accept-Language en/es/fr).
+     * O subtitulo original continua em português porque é usado nos filtros e URLs.
+     */
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @Schema(description = "Subtítulo traduzido (somente leitura, null em português)", example = "Crossbody", nullable = true)
+    private String subtituloTraduzido;
+
     public ProdutoDTO() {}
 
     public ProdutoDTO(String titulo, String subtitulo, String autor, String descricao,
@@ -211,4 +219,7 @@ public class ProdutoDTO {
 
     public String getPadrao() { return padrao; }
     public void setPadrao(String padrao) { this.padrao = padrao; }
+
+    public String getSubtituloTraduzido() { return subtituloTraduzido; }
+    public void setSubtituloTraduzido(String subtituloTraduzido) { this.subtituloTraduzido = subtituloTraduzido; }
 }

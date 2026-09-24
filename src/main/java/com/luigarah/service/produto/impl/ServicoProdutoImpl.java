@@ -4,8 +4,10 @@ import com.luigarah.exception.ProductNotFoundException;
 import com.luigarah.model.produto.Produto;
 import com.luigarah.repository.produto.RepositorioProduto;
 import com.luigarah.service.produto.ServicoProduto;
+import com.luigarah.service.traducao.ProdutoSalvoEvent;
 import com.luigarah.util.JsonStringCleaner;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +25,10 @@ public class ServicoProdutoImpl implements ServicoProduto {
 
     @Autowired
     private RepositorioProduto repositorioProduto;
+
+    /** Avisa a tradução automática quando um produto é criado ou editado. */
+    @Autowired
+    private ApplicationEventPublisher eventos;
 
     @Override
     @Transactional(readOnly = true)
@@ -82,7 +88,9 @@ public class ServicoProdutoImpl implements ServicoProduto {
         produto.setDestaques(JsonStringCleaner.clean(produto.getDestaques()));
         produto.setModelo(JsonStringCleaner.clean(produto.getModelo()));
 
-        return repositorioProduto.save(produto);
+        Produto salvo = repositorioProduto.save(produto);
+        eventos.publishEvent(new ProdutoSalvoEvent(salvo.getId()));
+        return salvo;
     }
 
     @Override
@@ -135,6 +143,7 @@ public class ServicoProdutoImpl implements ServicoProduto {
         System.out.println("✅ [ServicoProduto] Produto salvo com destaques: " + produtoSalvo.getDestaques());
         System.out.println("✅ [ServicoProduto] Produto salvo com imagens: " + produtoSalvo.getImagens());
 
+        eventos.publishEvent(new ProdutoSalvoEvent(produtoSalvo.getId()));
         return produtoSalvo;
     }
 

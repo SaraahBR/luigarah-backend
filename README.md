@@ -42,6 +42,7 @@
   - [⚠️ Tratamento de Exceções](#️-tratamento-de-exceções)
 - [🔒 Segurança e Autenticação](#-segurança-e-autenticação)
 - [🗄️ Banco de Dados](#️-banco-de-dados)
+- [🌍 Tradução Automática dos Produtos](#-tradução-automática-dos-produtos)
 - [📸 Sistema de Upload de Imagens](#-sistema-de-upload-de-imagens)
 - [📡 Endpoints da API](#-endpoints-da-api)
 - [🚀 Como Executar](#-como-executar)
@@ -1361,6 +1362,7 @@ DB_PASSWORD=<senha do banco>
 | `usuarios`, `enderecos`, `oauth_providers` | Contas, endereços e logins sociais |
 | `verification_tokens` | Códigos de verificação de e-mail e redefinição de senha |
 | `carrinho_itens`, `lista_desejo_itens` | Carrinho de compras e lista de desejos |
+| `produto_traducoes` | Textos dos produtos traduzidos para inglês, espanhol e francês |
 
 Todas as tabelas têm **RLS ativado sem policies**: o backend conecta como dono das tabelas (não é afetado),
 mas qualquer acesso pela Data API pública do Supabase é bloqueado.
@@ -1374,9 +1376,11 @@ mas qualquer acesso pela Data API pública do Supabase é bloqueado.
 | `V3__seed_produtos.sql` | 135 produtos restaurados do backup |
 | `V4__seed_estoque_inicial.sql` | Estoque inicial (10 unidades) |
 | `V5__novos_tamanhos_usa_e_sapatos.sql` | Acrescenta XXL/XXXL (USA) e 30/31 (sapatos) e sorteia esses tamanhos, com estoque de 1 a 15, entre os produtos compatíveis |
+| `V6__preferencias_usuario.sql` | Preferências do usuário (receber novidades e alertas de reposição) |
+| `V7__traducoes_produtos.sql` | Tabela `produto_traducoes` com as traduções dos produtos (en, es, fr) |
 
 > ⚠️ Nunca edite uma migration já aplicada — o Flyway valida o checksum e a aplicação não sobe.
-> Para mudar o banco, crie um novo arquivo `V5__descricao.sql`.
+> Para mudar o banco, crie um novo arquivo `V8__descricao.sql`.
 
 ### 👑 Criando um administrador
 
@@ -1394,6 +1398,55 @@ mapeamento das entidades (`ddl-auto=validate`) e executa as queries nativas dos 
 ```bash
 mvn test
 ```
+
+---
+
+## 🌍 Tradução Automática dos Produtos
+
+O site tem versão em **português (padrão), inglês, espanhol e francês**. Os textos fixos da interface são
+traduzidos no frontend; os textos dos **produtos** são traduzidos aqui no backend, com o
+**Google Cloud Translation (API v2)**.
+
+### Como funciona
+
+1. Ao **criar ou editar** um produto, o `ServicoProdutoImpl` publica um `ProdutoSalvoEvent`.
+2. Depois do commit, o `TraducaoProdutoListener` traduz o produto em segundo plano (`@Async`, executor
+   `traducaoExecutor`) para `en`, `es` e `fr` e grava em `produto_traducoes`.
+3. Na **subida da aplicação**, `preencherFaltantes()` traduz os produtos que ainda não têm tradução
+   (ou cujo texto em português mudou) — assim o catálogo existente é traduzido sozinho no primeiro deploy.
+4. Em cada resposta, o `TraducaoRespostaAdvice` lê o cabeçalho **`Accept-Language`** e troca os textos
+   dos produtos (inclusive dentro do carrinho, da lista de desejos e das páginas) pela tradução.
+   Sem o cabeçalho, ou com `pt`, tudo sai no original.
+
+| Campo | Comportamento |
+|-------|---------------|
+| `descricao`, `composicao`, `destaques` | Substituídos pela tradução |
+| `subtitulo` | **Continua em português** (é usado nos filtros e nas URLs) |
+| `subtituloTraduzido` | Campo novo, só leitura, com o subtítulo traduzido para exibir na tela |
+| `titulo` (marca), `autor` | Não são traduzidos (nomes próprios) |
+
+Cada tradução guarda o `hash_origem` (SHA-256 do texto em português). Se o texto original muda,
+a tradução antiga é ignorada até ser refeita — nunca aparece uma tradução desatualizada.
+
+### ⚙️ Configuração
+
+```properties
+GOOGLE_TRANSLATE_API_KEY=<chave da API do Google Cloud>
+```
+
+1. No [Google Cloud Console](https://console.cloud.google.com/), crie (ou escolha) um projeto.
+2. Ative a **Cloud Translation API**.
+3. Em **APIs e serviços → Credenciais**, crie uma **chave de API** (de preferência restrita à Cloud Translation API).
+4. Coloque a chave no `.env` (local) e em *Environment* no Render.
+
+Sem a chave o backend funciona normalmente, apenas sem traduzir os produtos (o site mostra o texto original).
+Se a cota acabar ou a chave for recusada (403/429), o preenchimento para e tenta de novo na próxima subida.
+
+### 🧪 Testes
+
+`TraducaoProdutoPostgresTest` usa um tradutor falso sobre o PostgreSQL embarcado e cobre: reconhecimento do idioma,
+tradução uma única vez por texto, troca dos textos no DTO, traduções desatualizadas, ausência da chave e a
+tradução das respostas da API (listas, mapas e carrinho) conforme o `Accept-Language`.
 
 ---
 
