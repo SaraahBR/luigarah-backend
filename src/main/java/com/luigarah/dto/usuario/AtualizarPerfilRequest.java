@@ -64,6 +64,13 @@ public class AtualizarPerfilRequest {
     @Schema(description = "Lista de endereços do usuário")
     private List<EnderecoDTO> enderecos;
 
+    // Preferências: null = não alterar
+    @Schema(description = "Receber novidades e lançamentos", example = "true")
+    private Boolean receberNovidades;
+
+    @Schema(description = "Receber alertas de reposição de estoque", example = "false")
+    private Boolean alertasReposicao;
+
     /**
      * Remove formatação do telefone antes de salvar
      */

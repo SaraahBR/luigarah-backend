@@ -49,6 +49,12 @@ public class UsuarioDTO {
     @Schema(description = "Indica se o email foi verificado", example = "true")
     private Boolean emailVerificado;
 
+    @Schema(description = "Preferência: receber novidades e lançamentos", example = "true")
+    private Boolean receberNovidades;
+
+    @Schema(description = "Preferência: receber alertas de reposição de estoque", example = "false")
+    private Boolean alertasReposicao;
+
     @Schema(description = "Provedor de autenticação", example = "LOCAL")
     private AuthProvider provider;
 

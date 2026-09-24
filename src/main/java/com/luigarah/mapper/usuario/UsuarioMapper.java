@@ -29,6 +29,8 @@ public class UsuarioMapper {
                 .role(usuario.getRole())
                 .ativo(usuario.getAtivo())
                 .emailVerificado(usuario.getEmailVerificado())
+                .receberNovidades(usuario.getReceberNovidades())
+                .alertasReposicao(usuario.getAlertasReposicao())
                 .provider(usuario.getProvider())
                 .dataCriacao(usuario.getDataCriacao())
                 .dataAtualizacao(usuario.getDataAtualizacao())

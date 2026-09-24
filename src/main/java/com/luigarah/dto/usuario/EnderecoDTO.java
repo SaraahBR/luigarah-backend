@@ -33,7 +33,8 @@ public class EnderecoDTO {
     private String cidade;
 
     @NotBlank(message = "CEP é obrigatório")
-    @Pattern(regexp = "\\d{5}-?\\d{3}", message = "CEP deve estar no formato 00000-000")
+    // Aceita CEP brasileiro (00000-000) e códigos postais de outros países
+    @Pattern(regexp = "^[A-Za-z0-9][A-Za-z0-9 -]{1,14}$", message = "CEP / código postal inválido")
     @Schema(description = "CEP", example = "01310-100", required = true)
     private String cep;
 

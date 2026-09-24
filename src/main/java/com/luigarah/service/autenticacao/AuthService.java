@@ -449,6 +449,12 @@ public class AuthService {
         if (request.getFotoPerfil() != null && !request.getFotoPerfil().isBlank()) {
             usuario.setFotoPerfil(request.getFotoPerfil());
         }
+        if (request.getReceberNovidades() != null) {
+            usuario.setReceberNovidades(request.getReceberNovidades());
+        }
+        if (request.getAlertasReposicao() != null) {
+            usuario.setAlertasReposicao(request.getAlertasReposicao());
+        }
 
         // Salva os dados pessoais primeiro
         usuario = usuarioRepository.save(usuario);
@@ -471,9 +477,9 @@ public class AuthService {
     private void atualizarEnderecosUsuario(Usuario usuario, List<EnderecoDTO> enderecosDTO) {
         log.info("🏠 Atualizando endereços do usuário ID: {}", usuario.getId());
 
-        // 1. Remove todos os endereços antigos
-        enderecoRepository.deleteByUsuarioId(usuario.getId());
-        enderecoRepository.flush();
+        // 1. Remove os endereços antigos pela própria coleção do usuário
+        //    (orphanRemoval apaga no banco e mantém a entidade em memória coerente)
+        usuario.getEnderecos().clear();
         log.info("🗑️ Endereços antigos removidos");
 
         // 2. Adiciona os novos endereços
@@ -502,8 +508,9 @@ public class AuthService {
             log.info("✅ Primeiro endereço marcado como principal automaticamente");
         }
 
-        // 4. Salva todos os endereços
-        enderecoRepository.saveAll(novosEnderecos);
+        // 4. Salva todos os endereços (cascade do Usuario)
+        usuario.getEnderecos().addAll(novosEnderecos);
+        usuarioRepository.saveAndFlush(usuario);
         log.info("✅ {} endereços salvos com sucesso!", novosEnderecos.size());
     }
 

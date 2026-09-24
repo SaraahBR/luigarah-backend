@@ -86,6 +86,15 @@ public class Usuario implements UserDetails {
     @Builder.Default
     private Boolean emailVerificado = false;
 
+    // Preferências da tela "Minha Conta" (migration V6)
+    @Column(name = "RECEBER_NOVIDADES", nullable = false)
+    @Builder.Default
+    private Boolean receberNovidades = true;
+
+    @Column(name = "ALERTAS_REPOSICAO", nullable = false)
+    @Builder.Default
+    private Boolean alertasReposicao = false;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "PROVIDER", length = 20)
     private AuthProvider provider;
