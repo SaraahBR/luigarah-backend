@@ -1475,6 +1475,16 @@ atravessa o continente (~180 ms ida e volta). Para as páginas não dependerem d
 | `CACHE_CATALOGO_HABILITADO` | `true` | Liga/desliga o cache |
 | `CACHE_CATALOGO_TTL_MINUTOS` | `30` | Tempo máximo de uma resposta em cache |
 
+**Resultado** (medido em produção, setembro/2026, a partir do Brasil):
+
+| Requisição | Antes | Depois |
+|------------|-------|--------|
+| Lista de uma categoria (`/api/produtos/categoria/roupas?tamanho=1000`) | 2,7 a 3,4 s | 0,3 s |
+| Produto por id (`/api/produtos/1`) | 0,7 a 1,5 s | 0,2 s |
+| Estoque de um produto | 0,9 a 1,7 s | 0,25 s |
+
+O que sobra é basicamente o caminho de ida e volta entre o Brasil e o servidor em Oregon.
+
 ### 🧪 Testes do banco
 
 `RepositoriosPostgresTest` sobe um **PostgreSQL embarcado** (sem Docker), aplica as migrations, valida o
