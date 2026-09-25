@@ -104,10 +104,17 @@ public class CacheCatalogoFilter extends OncePerRequestFilter {
         return chave(request.getRequestURI(), request.getQueryString(), request.getHeader(HttpHeaders.ACCEPT_LANGUAGE));
     }
 
-    /** Chave do cache: caminho + query + idioma (também usada pelo aquecimento). */
+    /** Rotas cuja resposta é igual em qualquer idioma (não têm texto traduzido). */
+    static final List<String> SEM_IDIOMA = List.of("/api/estoque", "/api/tamanhos", "/api/padroes-tamanho");
+
+    /**
+     * Chave do cache: caminho + query + idioma (também usada pelo aquecimento).
+     * Estoque e tamanhos são iguais em qualquer idioma: uma entrada só para todos.
+     */
     static String chave(String caminho, String query, String idioma) {
+        boolean semIdioma = SEM_IDIOMA.stream().anyMatch(p -> caminho.equals(p) || caminho.startsWith(p + "/"));
         return caminho
                 + (query != null ? "?" + query : "")
-                + "|" + (idioma != null ? idioma.trim().toLowerCase() : "");
+                + "|" + (semIdioma || idioma == null ? "" : idioma.trim().toLowerCase());
     }
 }

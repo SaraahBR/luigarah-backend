@@ -1,5 +1,6 @@
 package com.luigarah.cache;
 
+import com.luigarah.repository.produto.RepositorioProduto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.context.WebServerInitializedEvent;
@@ -12,11 +13,14 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Mantém no cache as respostas que o site pede ao abrir as páginas (menu, listagens,
- * identidades e filtros de tamanho), nos quatro idiomas.
+ * identidades e filtros de tamanho, nos quatro idiomas) e, de cada produto, o estoque
+ * (usado ao adicionar no carrinho) e a página de detalhe.
  *
  * Sem isso, a primeira visita depois de um deploy, de uma edição no painel admin ou
  * de o cache expirar esperava as consultas ao banco (2 a 3 s cada). A cada 30 s as
@@ -46,8 +50,14 @@ public class AquecimentoCacheCatalogo {
             "/api/tamanhos/produtos?categoria=sapatos&comEstoque=true"
     );
 
+    /** Os ids mudam pouco (só quando o admin cria/remove produto): relê a cada 5 minutos. */
+    private static final Duration VALIDADE_IDS = Duration.ofMinutes(5);
+
     private final CacheRespostasCatalogo cache;
+    private final RepositorioProduto repositorioProduto;
     private final boolean habilitado;
+    private volatile List<Long> idsProdutos = List.of();
+    private volatile Instant idsLidosEm = Instant.EPOCH;
     /** Criado só no primeiro uso: sem servidor web (ex.: testes) nunca é necessário. */
     private volatile HttpClient http;
 
@@ -55,8 +65,10 @@ public class AquecimentoCacheCatalogo {
     private volatile int porta = -1;
 
     public AquecimentoCacheCatalogo(CacheRespostasCatalogo cache,
+                                    RepositorioProduto repositorioProduto,
                                     @Value("${app.cache.catalogo.aquecimento:true}") boolean habilitado) {
         this.cache = cache;
+        this.repositorioProduto = repositorioProduto;
         this.habilitado = habilitado;
     }
 
@@ -72,20 +84,54 @@ public class AquecimentoCacheCatalogo {
         if (aquecidas > 0) log.info("⚡ Cache do catálogo aquecido: {} resposta(s)", aquecidas);
     }
 
-    /** Pede as rotas que não estão no cache. Devolve quantas foram pedidas. */
+    /**
+     * Pede as rotas que não estão no cache, na ordem de prioridade: listagens, estoque de
+     * cada produto e detalhe de cada produto. Devolve quantas foram pedidas.
+     */
     int aquecerFaltantes() {
         int pedidas = 0;
         for (String idioma : IDIOMAS) {
-            for (String rota : ROTAS) {
-                int corte = rota.indexOf('?');
-                String caminho = corte < 0 ? rota : rota.substring(0, corte);
-                String query = corte < 0 ? null : rota.substring(corte + 1);
-                if (cache.buscar(CacheCatalogoFilter.chave(caminho, query, idioma)) != null) continue;
-                pedir(rota, idioma);
-                pedidas++;
-            }
+            pedidas += aquecer(ROTAS, idioma);
+        }
+
+        List<Long> ids = idsDosProdutos();
+        List<String> estoques = new ArrayList<>();
+        List<String> detalhes = new ArrayList<>();
+        for (Long id : ids) {
+            estoques.add("/api/estoque/produtos/" + id + "/estoque");
+            detalhes.add("/api/produtos/" + id);
+        }
+        // estoque não depende do idioma: uma vez só
+        pedidas += aquecer(estoques, IDIOMAS.get(0));
+        for (String idioma : IDIOMAS) {
+            pedidas += aquecer(detalhes, idioma);
         }
         return pedidas;
+    }
+
+    private int aquecer(List<String> rotas, String idioma) {
+        int pedidas = 0;
+        for (String rota : rotas) {
+            int corte = rota.indexOf('?');
+            String caminho = corte < 0 ? rota : rota.substring(0, corte);
+            String query = corte < 0 ? null : rota.substring(corte + 1);
+            if (cache.buscar(CacheCatalogoFilter.chave(caminho, query, idioma)) != null) continue;
+            pedir(rota, idioma);
+            pedidas++;
+        }
+        return pedidas;
+    }
+
+    List<Long> idsDosProdutos() {
+        if (Duration.between(idsLidosEm, Instant.now()).compareTo(VALIDADE_IDS) > 0) {
+            try {
+                idsProdutos = repositorioProduto.listarIds();
+                idsLidosEm = Instant.now();
+            } catch (Exception e) {
+                log.debug("⚡ Não foi possível ler os ids dos produtos: {}", e.getMessage());
+            }
+        }
+        return idsProdutos;
     }
 
     private HttpClient cliente() {

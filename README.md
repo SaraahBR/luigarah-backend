@@ -1460,9 +1460,11 @@ atravessa o continente (~180 ms ida e volta). Para as páginas não dependerem d
   ficam em memória, separadas por URL e `Accept-Language`. O cabeçalho `X-Cache: HIT/MISS` mostra de onde veio.
 - **Sempre atualizado:** qualquer `POST/PUT/PATCH/DELETE` nessas rotas (painel admin) e cada tradução nova
   limpam o cache. Alterações feitas direto no banco (SQL Editor) aparecem em até 30 minutos.
-- **Aquecimento** (`cache/AquecimentoCacheCatalogo`): a cada 30 s o próprio servidor pede, em segundo plano, as
-  rotas que o site usa ao abrir as páginas (listas por categoria, identidades e filtros de tamanho, nos 4 idiomas)
-  que não estiverem no cache. Assim nem o primeiro visitante depois de um deploy ou de uma edição espera o banco.
+- **Aquecimento** (`cache/AquecimentoCacheCatalogo`): a cada 30 s o próprio servidor pede, em segundo plano, o que
+  não estiver no cache: as rotas que o site usa ao abrir as páginas (listas por categoria, identidades e filtros de
+  tamanho, nos 4 idiomas), o estoque de cada produto (usado ao adicionar no carrinho) e a página de cada produto.
+  Assim nem o primeiro visitante depois de um deploy ou de uma edição espera o banco.
+- **Estoque e tamanhos sem idioma:** essas respostas são iguais em qualquer idioma e têm uma entrada só no cache.
 - **JWT fora das leituras públicas:** o filtro JWT não roda nos GETs do catálogo, que não dependem do usuário;
   antes, cada leitura de quem estava logado buscava a conta no banco antes de chegar ao cache.
 - **Menos idas ao banco:** `hibernate.default_batch_fetch_size=50` carrega as identidades dos produtos em lote.

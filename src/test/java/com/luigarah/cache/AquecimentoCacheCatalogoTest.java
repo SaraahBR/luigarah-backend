@@ -1,7 +1,9 @@
 package com.luigarah.cache;
 
+import com.luigarah.repository.produto.RepositorioProduto;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +17,13 @@ class AquecimentoCacheCatalogoTest {
         final List<String> pedidos = new ArrayList<>();
 
         AquecimentoFalso(CacheRespostasCatalogo cache) {
-            super(cache, true);
+            super(cache, repositorioCom(List.of(1L, 2L)), true);
+        }
+
+        static RepositorioProduto repositorioCom(List<Long> ids) {
+            RepositorioProduto repo = Mockito.mock(RepositorioProduto.class);
+            Mockito.when(repo.listarIds()).thenReturn(ids);
+            return repo;
         }
 
         @Override
@@ -37,10 +45,25 @@ class AquecimentoCacheCatalogoTest {
 
         int pedidas = aquecimento.aquecerFaltantes();
 
-        int total = AquecimentoCacheCatalogo.ROTAS.size() * AquecimentoCacheCatalogo.IDIOMAS.size();
-        assertEquals(total - 1, pedidas);
+        int idiomas = AquecimentoCacheCatalogo.IDIOMAS.size();
+        // (o pedir falso não grava no cache, então cada idioma pede de novo)
+        int listagens = AquecimentoCacheCatalogo.ROTAS.size() * idiomas;
+        int estoques = 2;              // um por produto, sem idioma
+        int detalhes = 2 * idiomas;    // um por produto e idioma
+        assertEquals(listagens + estoques + detalhes - 1, pedidas);
         assertFalse(aquecimento.pedidos.contains("/api/produtos/categoria/bolsas?pagina=0&tamanho=1000 pt-BR"));
         assertTrue(aquecimento.pedidos.contains("/api/produtos/categoria/bolsas?pagina=0&tamanho=1000 en-US"));
+    }
+
+    @Test
+    @DisplayName("Estoque e tamanhos têm uma chave só para todos os idiomas; produtos, uma por idioma")
+    void chavePorIdioma() {
+        assertEquals(CacheCatalogoFilter.chave("/api/estoque/produtos/1/estoque", null, "pt-BR"),
+                CacheCatalogoFilter.chave("/api/estoque/produtos/1/estoque", null, "fr-FR"));
+        assertEquals(CacheCatalogoFilter.chave("/api/tamanhos/produtos", "categoria=roupas", "en-US"),
+                CacheCatalogoFilter.chave("/api/tamanhos/produtos", "categoria=roupas", "es-ES"));
+        assertNotEquals(CacheCatalogoFilter.chave("/api/produtos/1", null, "pt-BR"),
+                CacheCatalogoFilter.chave("/api/produtos/1", null, "en-US"));
     }
 
     @Test

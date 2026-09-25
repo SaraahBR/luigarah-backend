@@ -32,6 +32,10 @@ import java.util.List;
 @Repository
 public interface RepositorioProduto extends JpaRepository<Produto, Long> {
 
+    /** Só os ids de todos os produtos (aquecimento do cache do catálogo). */
+    @Query("SELECT p.id FROM Produto p ORDER BY p.id")
+    List<Long> listarIds();
+
     // ---------------------------------------------------------------------
     // UTILIDADES
     // ---------------------------------------------------------------------
