@@ -3,17 +3,20 @@ package com.luigarah.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
 
 /**
- * Execução em segundo plano das traduções automáticas.
- * Uma única thread: as traduções são poucas e assim não disputam as
- * conexões do pool com as requisições do site.
+ * Tarefas em segundo plano:
+ * - traduções automáticas (@Async), numa única thread: são poucas e assim não
+ *   disputam as conexões do pool com as requisições do site;
+ * - aquecimento do cache do catálogo (@Scheduled, ver AquecimentoCacheCatalogo).
  */
 @Configuration
 @EnableAsync
+@EnableScheduling
 public class AsyncConfig {
 
     @Bean(name = "traducaoExecutor")

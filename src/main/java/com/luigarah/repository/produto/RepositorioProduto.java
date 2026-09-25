@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -219,6 +220,35 @@ public interface RepositorioProduto extends JpaRepository<Produto, Long> {
              ORDER BY t.ordem NULLS FIRST, t.etiqueta
             """, nativeQuery = true)
     List<String> listarEtiquetasPorProduto(@Param("produtoId") Long produtoId);
+
+    /**
+     * Etiquetas de vários produtos numa única consulta: cada linha é [produto_id, etiqueta].
+     * Usado pelas listagens, que antes pediam os tamanhos produto por produto.
+     * Com somenteComEstoque, ignora tamanhos zerados (mesma regra do filtro por tamanho).
+     */
+    @Query(value = """
+            SELECT pt.produto_id, t.etiqueta
+              FROM produtos_tamanhos pt
+              JOIN tamanhos t ON t.id = pt.tamanho_id
+             WHERE pt.produto_id IN (:ids)
+               AND (:somenteComEstoque = FALSE OR COALESCE(pt.qtd_estoque, 0) > 0)
+             ORDER BY pt.produto_id, t.ordem NULLS FIRST, t.etiqueta
+            """, nativeQuery = true)
+    List<Object[]> listarEtiquetasPorProdutos(@Param("ids") Collection<Long> ids,
+                                              @Param("somenteComEstoque") boolean somenteComEstoque);
+
+    /** Mesma consulta para todos os produtos de uma categoria: cada linha é [produto_id, etiqueta]. */
+    @Query(value = """
+            SELECT pt.produto_id, t.etiqueta
+              FROM produtos_tamanhos pt
+              JOIN tamanhos t ON t.id = pt.tamanho_id
+              JOIN produtos p ON p.id = pt.produto_id
+             WHERE p.categoria = :categoria
+               AND (:somenteComEstoque = FALSE OR COALESCE(pt.qtd_estoque, 0) > 0)
+             ORDER BY pt.produto_id, t.ordem NULLS FIRST, t.etiqueta
+            """, nativeQuery = true)
+    List<Object[]> listarEtiquetasPorCategoria(@Param("categoria") String categoria,
+                                               @Param("somenteComEstoque") boolean somenteComEstoque);
 
     /** Remove todos os vínculos de tamanho do produto. */
     @Modifying

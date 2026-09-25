@@ -98,13 +98,6 @@ public class ServicoProdutoImpl implements ServicoProduto {
         Produto p = repositorioProduto.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException("Produto com ID " + id + " não encontrado"));
 
-        // 🔍 Log detalhado para debug
-        System.out.println("🔍 [ServicoProduto] Atualizando produto ID: " + id);
-        System.out.println("🔍 [ServicoProduto] Destaques ANTES da atualização: " + p.getDestaques());
-        System.out.println("🔍 [ServicoProduto] Destaques RECEBIDOS do DTO: " + produtoAtualizado.getDestaques());
-        System.out.println("🔍 [ServicoProduto] Imagens ANTES da atualização: " + p.getImagens());
-        System.out.println("🔍 [ServicoProduto] Imagens RECEBIDAS do DTO: " + produtoAtualizado.getImagens());
-
         // ✅ Atualização de campos simples
         if (produtoAtualizado.getTitulo() != null)           p.setTitulo(produtoAtualizado.getTitulo());
         if (produtoAtualizado.getSubtitulo() != null)        p.setSubtitulo(produtoAtualizado.getSubtitulo());
@@ -119,29 +112,27 @@ public class ServicoProdutoImpl implements ServicoProduto {
         // Imagens: substitui completamente o JSON do array
         if (produtoAtualizado.getImagens() != null) {
             String imagensLimpas = JsonStringCleaner.clean(produtoAtualizado.getImagens());
-            System.out.println("✅ [ServicoProduto] Imagens APÓS limpeza: " + imagensLimpas);
             p.setImagens(imagensLimpas);
         }
 
         // Destaques: substitui completamente o JSON do array
         if (produtoAtualizado.getDestaques() != null) {
             String destaquesLimpos = JsonStringCleaner.clean(produtoAtualizado.getDestaques());
-            System.out.println("✅ [ServicoProduto] Destaques APÓS limpeza: " + destaquesLimpos);
             p.setDestaques(destaquesLimpos);
         }
 
         // ✅ Outros campos
         if (produtoAtualizado.getComposicao() != null)       p.setComposicao(produtoAtualizado.getComposicao());
-        if (produtoAtualizado.getCategoria() != null)        p.setCategoria(produtoAtualizado.getCategoria());
+        if (produtoAtualizado.getCategoria() != null
+                && !produtoAtualizado.getCategoria().equalsIgnoreCase(p.getCategoria())) {
+            // Tamanhos pertencem a uma categoria (roupas x sapatos): os da categoria antiga
+            // ficariam presos ao produto e apareceriam errado no filtro e no estoque
+            repositorioProduto.deletarTamanhosDoProduto(id);
+            p.setCategoria(produtoAtualizado.getCategoria());
+        }
         if (produtoAtualizado.getModelo() != null)           p.setModelo(JsonStringCleaner.clean(produtoAtualizado.getModelo()));
 
-        System.out.println("💾 [ServicoProduto] Salvando produto com destaques: " + p.getDestaques());
-        System.out.println("💾 [ServicoProduto] Salvando produto com imagens: " + p.getImagens());
-
         Produto produtoSalvo = repositorioProduto.save(p);
-
-        System.out.println("✅ [ServicoProduto] Produto salvo com destaques: " + produtoSalvo.getDestaques());
-        System.out.println("✅ [ServicoProduto] Produto salvo com imagens: " + produtoSalvo.getImagens());
 
         eventos.publishEvent(new ProdutoSalvoEvent(produtoSalvo.getId()));
         return produtoSalvo;

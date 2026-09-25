@@ -3,6 +3,8 @@ package com.luigarah.service.identidade;
 import com.luigarah.dto.identidade.IdentidadeCreateDTO;
 import com.luigarah.dto.identidade.IdentidadeDTO;
 import com.luigarah.dto.identidade.IdentidadeUpdateDTO;
+import com.luigarah.exception.RecursoNaoEncontradoException;
+import com.luigarah.exception.RegraDeNegocioException;
 import com.luigarah.mapper.identidade.IdentidadeMapper;
 import com.luigarah.model.identidade.Identidade;
 import com.luigarah.repository.identidade.RepositorioIdentidade;
@@ -48,7 +50,7 @@ public class ServicoIdentidade {
     @Transactional(readOnly = true)
     public IdentidadeDTO buscarPorId(Long id) {
         Identidade identidade = repositorioIdentidade.findById(id)
-                .orElseThrow(() -> new RuntimeException("Identidade não encontrada com ID: " + id));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Identidade não encontrada com ID: " + id));
         return identidadeMapper.toDTO(identidade);
     }
 
@@ -58,7 +60,7 @@ public class ServicoIdentidade {
     @Transactional(readOnly = true)
     public IdentidadeDTO buscarPorCodigo(String codigo) {
         Identidade identidade = repositorioIdentidade.findByCodigo(codigo)
-                .orElseThrow(() -> new RuntimeException("Identidade não encontrada com código: " + codigo));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Identidade não encontrada com código: " + codigo));
         return identidadeMapper.toDTO(identidade);
     }
 
@@ -69,7 +71,7 @@ public class ServicoIdentidade {
     public IdentidadeDTO criar(IdentidadeCreateDTO dto) {
         // Verifica se já existe identidade com o mesmo código
         if (repositorioIdentidade.findByCodigo(dto.getCodigo()).isPresent()) {
-            throw new RuntimeException("Já existe uma identidade com o código: " + dto.getCodigo());
+            throw new RegraDeNegocioException("Já existe uma identidade com o código: " + dto.getCodigo());
         }
 
         Identidade identidade = identidadeMapper.toEntity(dto);
@@ -83,12 +85,12 @@ public class ServicoIdentidade {
     @Transactional
     public IdentidadeDTO atualizar(Long id, IdentidadeUpdateDTO dto) {
         Identidade identidade = repositorioIdentidade.findById(id)
-                .orElseThrow(() -> new RuntimeException("Identidade não encontrada com ID: " + id));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Identidade não encontrada com ID: " + id));
 
         // Se está atualizando o código, verifica se já existe outro registro com esse código
         if (dto.getCodigo() != null && !dto.getCodigo().equals(identidade.getCodigo())) {
             if (repositorioIdentidade.findByCodigo(dto.getCodigo()).isPresent()) {
-                throw new RuntimeException("Já existe uma identidade com o código: " + dto.getCodigo());
+                throw new RegraDeNegocioException("Já existe uma identidade com o código: " + dto.getCodigo());
             }
         }
 
@@ -103,7 +105,7 @@ public class ServicoIdentidade {
     @Transactional
     public void deletar(Long id) {
         if (!repositorioIdentidade.existsById(id)) {
-            throw new RuntimeException("Identidade não encontrada com ID: " + id);
+            throw new RecursoNaoEncontradoException("Identidade não encontrada com ID: " + id);
         }
         repositorioIdentidade.deleteById(id);
     }

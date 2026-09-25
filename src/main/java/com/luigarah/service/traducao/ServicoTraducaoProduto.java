@@ -9,6 +9,7 @@ import com.luigarah.repository.produto.RepositorioProduto;
 import com.luigarah.repository.produto.RepositorioProdutoTraducao;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -39,6 +40,7 @@ public class ServicoTraducaoProduto {
     private final GoogleTranslateClient cliente;
     private final RepositorioProduto repositorioProduto;
     private final RepositorioProdutoTraducao repositorioTraducao;
+    private final ApplicationEventPublisher eventos;
     private final ObjectMapper mapper = new ObjectMapper();
 
     /** Textos em português usados como origem da tradução (formato normalizado). */
@@ -101,6 +103,8 @@ public class ServicoTraducaoProduto {
         }
         if (traduzidos > 0) {
             log.info("🌐 Produto {} traduzido para {} idioma(s)", produtoId, traduzidos);
+            // respostas do catálogo guardadas em cache ainda têm o texto antigo
+            eventos.publishEvent(new TraducoesAtualizadasEvent(produtoId));
         }
         return traduzidos;
     }

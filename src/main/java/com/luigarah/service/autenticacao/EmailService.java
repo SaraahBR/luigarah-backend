@@ -497,7 +497,7 @@ public class EmailService {
                             
                             <div class="alert">
                                 <strong>⏰ Atenção:</strong>
-                                Este código expira em <strong>12 horas</strong>.
+                                Este código expira em <strong>1 hora</strong>.
                             </div>
                             
                             <div class="security-alert">

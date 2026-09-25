@@ -41,6 +41,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -61,10 +62,18 @@ public class AuthService {
     private final EnderecoRepository enderecoRepository;
     private final EnderecoMapper enderecoMapper;
     private final EmailService emailService;
+    private final VerificadorTokenOAuth verificadorTokenOAuth;
     private final VerificationTokenRepository verificationTokenRepository;
 
     // Map para controlar locks por email (evita race condition)
     private final ConcurrentHashMap<String, Object> emailLocks = new ConcurrentHashMap<>();
+
+    /** Validade do código de confirmação de conta (o e-mail informa 12 horas). */
+    static final Duration VALIDADE_VERIFICACAO_EMAIL = Duration.ofHours(12);
+    /** Validade do código de redefinição de senha: curta, porque dá acesso à conta. */
+    static final Duration VALIDADE_RESET_SENHA = Duration.ofHours(1);
+    /** Tempo mínimo entre dois pedidos de código para o mesmo e-mail. */
+    static final Duration INTERVALO_ENTRE_CODIGOS = Duration.ofSeconds(60);
 
     @Transactional
     public AuthResponseDTO login(LoginRequestDTO loginRequest) {
@@ -158,15 +167,10 @@ public class AuthService {
 
         usuario = usuarioRepository.save(usuario);
 
-        // Gera token com as authorities corretas do usuário
-        String token = generateTokenForUser(usuario);
-
-        UsuarioDTO usuarioDTO = usuarioMapper.toDTO(usuario);
-
+        // Sem token: a conta só pode ser usada depois de confirmar o e-mail
+        // (o token é entregue em /verificar-codigo, como no login)
         return AuthResponseDTO.builder()
-                .token(token)
-                .tipo("Bearer")
-                .usuario(usuarioDTO)
+                .usuario(usuarioMapper.toDTO(usuario))
                 .build();
     }
 
@@ -189,38 +193,6 @@ public class AuthService {
     }
 
     @Transactional
-    public UsuarioDTO atualizarPerfil(RegistroRequestDTO updateRequest) {
-        Usuario usuario = getUsuarioAutenticado();
-
-        if (!usuario.getEmail().equals(updateRequest.getEmail())) {
-            if (usuarioRepository.existsByEmail(updateRequest.getEmail())) {
-                throw new RegraDeNegocioException("Email já está em uso");
-            }
-            usuario.setEmail(updateRequest.getEmail());
-            usuario.setEmailVerificado(false);
-        }
-
-        usuario.setNome(updateRequest.getNome());
-        usuario.setSobrenome(updateRequest.getSobrenome());
-        usuario.setTelefone(updateRequest.getTelefone());
-        usuario.setDataNascimento(updateRequest.getDataNascimento());
-        usuario.setGenero(updateRequest.getGenero());
-
-        // Atualiza foto de perfil se fornecida
-        if (updateRequest.getFotoPerfil() != null && !updateRequest.getFotoPerfil().isBlank()) {
-            usuario.setFotoPerfil(updateRequest.getFotoPerfil());
-        }
-
-        if (updateRequest.getSenha() != null && !updateRequest.getSenha().isBlank()) {
-            usuario.setSenha(passwordEncoder.encode(updateRequest.getSenha()));
-        }
-
-        usuario = usuarioRepository.save(usuario);
-
-        return usuarioMapper.toDTO(usuario);
-    }
-
-    @Transactional
     public void alterarSenha(AlterarSenhaRequestDTO request) {
         Usuario usuario = getUsuarioAutenticado();
 
@@ -234,6 +206,9 @@ public class AuthService {
             throw new RegraDeNegocioException("Nova senha e confirmação não coincidem");
         }
 
+        // Mesmas regras do cadastro e da redefinição de senha
+        validarSenha(request.getNovaSenha());
+
         // Atualizar senha
         usuario.setSenha(passwordEncoder.encode(request.getNovaSenha()));
         usuarioRepository.save(usuario);
@@ -243,35 +218,40 @@ public class AuthService {
 
     /**
      * Sincroniza conta OAuth com o backend.
+     * - O token do provedor é conferido no Google/Facebook: o e-mail usado é o que o
+     *   provedor garante, nunca o que veio no corpo da requisição.
      * - Se e-mail existe: vincula OAuth e retorna JWT
      * - Se e-mail não existe: cria conta e retorna JWT
      */
     @Transactional
     public AuthResponseDTO syncOAuth(OAuthSyncRequest request) {
-        log.info("Sincronizando conta OAuth - Provider: {}, Email: {}", request.getProvider(), request.getEmail());
+        VerificadorTokenOAuth.UsuarioOAuth confirmado =
+                verificadorTokenOAuth.verificar(request.getProvider(), request.getToken());
+        String email = confirmado.email();
+        log.info("Sincronizando conta OAuth - Provider: {}", request.getProvider());
 
         // Obtém ou cria um lock específico para este email
-        Object lock = emailLocks.computeIfAbsent(request.getEmail(), k -> new Object());
+        Object lock = emailLocks.computeIfAbsent(email, k -> new Object());
 
         try {
             synchronized (lock) {
-                return executeSyncOAuth(request);
+                return executeSyncOAuth(request, email, confirmado.providerId());
             }
         } finally {
             // Remove o lock se não houver mais threads aguardando
-            emailLocks.remove(request.getEmail());
+            emailLocks.remove(email);
         }
     }
 
     /**
-     * Execução sincronizada do sync OAuth
+     * Execução sincronizada do sync OAuth (e-mail e id já confirmados pelo provedor)
      */
-    private AuthResponseDTO executeSyncOAuth(OAuthSyncRequest request) {
+    private AuthResponseDTO executeSyncOAuth(OAuthSyncRequest request, String email, String providerId) {
         // 1. Busca usuário por e-mail
         Usuario usuario;
         boolean isNewUser = false;
 
-        var usuarioOpt = usuarioRepository.findByEmail(request.getEmail());
+        var usuarioOpt = usuarioRepository.findByEmail(email);
 
         if (usuarioOpt.isPresent()) {
             // E-mail já existe: vincula OAuth
@@ -289,6 +269,9 @@ public class AuthService {
                 log.warn("⚠️ Nenhuma foto fornecida no request");
             }
 
+            // O provedor confirmou que o e-mail é da pessoa
+            usuario.setEmailVerificado(true);
+
             // Atualiza provider se estava como LOCAL
             if (usuario.getProvider() == AuthProvider.LOCAL) {
                 AuthProvider authProvider = mapStringToAuthProvider(request.getProvider());
@@ -302,7 +285,7 @@ public class AuthService {
         } else {
             // E-mail não existe: cria nova conta
             isNewUser = true;
-            log.info("Criando novo usuário OAuth: {}", request.getEmail());
+            log.info("Criando novo usuário OAuth ({})", request.getProvider());
 
             String fotoParaSalvar = request.getFotoPerfil();
             log.info("📸 Foto recebida do frontend (novo usuário): {}", fotoParaSalvar);
@@ -312,13 +295,13 @@ public class AuthService {
             usuario = Usuario.builder()
                     .nome(request.getNome())
                     .sobrenome(request.getSobrenome())
-                    .email(request.getEmail())
+                    .email(email)
                     .fotoPerfil(fotoParaSalvar)
                     .role(Role.USER)
                     .ativo(true)
                     .emailVerificado(true) // OAuth já verifica o email
                     .provider(authProvider != null ? authProvider : AuthProvider.LOCAL)
-                    .providerId(request.getOauthId())
+                    .providerId(providerId)
                     .senha(passwordEncoder.encode(java.util.UUID.randomUUID().toString())) // Senha aleatória
                     .build();
 
@@ -335,8 +318,8 @@ public class AuthService {
         if (providerOpt.isPresent()) {
             // Atualiza provider existente
             oauthProvider = providerOpt.get();
-            if (request.getOauthId() != null && !request.getOauthId().isEmpty()) {
-                oauthProvider.setProviderId(request.getOauthId());
+            if (providerId != null && !providerId.isEmpty()) {
+                oauthProvider.setProviderId(providerId);
             }
             log.info("OAuth provider atualizado: {}", request.getProvider());
         } else {
@@ -344,7 +327,7 @@ public class AuthService {
             oauthProvider = OAuthProvider.builder()
                     .usuario(usuario)
                     .provider(request.getProvider())
-                    .providerId(request.getOauthId())
+                    .providerId(providerId)
                     .build();
             log.info("Novo OAuth provider criado: {}", request.getProvider());
         }
@@ -633,18 +616,19 @@ public class AuthService {
         }
 
         // Cenário 4: Sucesso - envia código
+        garantirIntervaloEntreCodigos(email, VerificationToken.TipoToken.VERIFICACAO_EMAIL);
+
         // Remove tokens antigos de verificação deste email
         verificationTokenRepository.deleteByEmailAndTipo(email, VerificationToken.TipoToken.VERIFICACAO_EMAIL);
 
         // Gera novo código
         String codigo = gerarCodigoAleatorio();
 
-        // Cria token de verificação (válido por 12 horas)
         VerificationToken token = criarVerificationToken(
                 email,
                 codigo,
                 VerificationToken.TipoToken.VERIFICACAO_EMAIL,
-                12
+                VALIDADE_VERIFICACAO_EMAIL
         );
 
         verificationTokenRepository.save(token);
@@ -658,7 +642,8 @@ public class AuthService {
     /**
      * Verifica código de confirmação de conta
      */
-    @Transactional
+    // noRollbackFor: um código errado precisa gravar a tentativa antes de devolver o erro
+    @Transactional(noRollbackFor = CodigoVerificacaoInvalidoException.class)
     public AuthResponseDTO verificarCodigo(String email, String codigo) {
         log.info("🔍 Verificando código para: {}", email);
 
@@ -674,27 +659,7 @@ public class AuthService {
                         "Código não encontrado"
                 ));
 
-        // Valida o token
-        if (token.isExpirado()) {
-            throw new CodigoVerificacaoInvalidoException(
-                    "Código expirado. Solicite um novo código.",
-                    "Código expirado"
-            );
-        }
-
-        if (token.getUsado()) {
-            throw new CodigoVerificacaoInvalidoException(
-                    "Código já foi utilizado. Solicite um novo código.",
-                    "Código já utilizado"
-            );
-        }
-
-        if (!token.getCodigo().equals(codigo)) {
-            throw new CodigoVerificacaoInvalidoException(
-                    "Código inválido.",
-                    "Código inválido"
-            );
-        }
+        conferirCodigo(token, codigo);
 
         // Marca o token como usado
         token.setUsado(true);
@@ -738,18 +703,19 @@ public class AuthService {
                     ". Use o mesmo método para fazer login.");
         }
 
+        garantirIntervaloEntreCodigos(email, VerificationToken.TipoToken.RESET_SENHA);
+
         // Remove tokens antigos de reset de senha deste email
         verificationTokenRepository.deleteByEmailAndTipo(email, VerificationToken.TipoToken.RESET_SENHA);
 
         // Gera novo código
         String codigo = gerarCodigoAleatorio();
 
-        // Cria token de reset (válido por 12 horas)
         VerificationToken token = criarVerificationToken(
                 email,
                 codigo,
                 VerificationToken.TipoToken.RESET_SENHA,
-                12
+                VALIDADE_RESET_SENHA
         );
 
         verificationTokenRepository.save(token);
@@ -763,7 +729,8 @@ public class AuthService {
     /**
      * Redefine senha usando código de verificação
      */
-    @Transactional
+    // noRollbackFor: um código errado precisa gravar a tentativa antes de devolver o erro
+    @Transactional(noRollbackFor = CodigoVerificacaoInvalidoException.class)
     public void redefinirSenhaComCodigo(String email, String codigo, String novaSenha, String confirmarNovaSenha) {
         log.info("🔑 Redefinindo senha para: {}", email);
 
@@ -787,27 +754,7 @@ public class AuthService {
                         "Código não encontrado"
                 ));
 
-        // Valida o token
-        if (token.isExpirado()) {
-            throw new CodigoVerificacaoInvalidoException(
-                    "Código expirado. Solicite um novo código.",
-                    "Código expirado"
-            );
-        }
-
-        if (token.getUsado()) {
-            throw new CodigoVerificacaoInvalidoException(
-                    "Código já foi utilizado. Solicite um novo código.",
-                    "Código já utilizado"
-            );
-        }
-
-        if (!token.getCodigo().equals(codigo)) {
-            throw new CodigoVerificacaoInvalidoException(
-                    "Código inválido.",
-                    "Código inválido"
-            );
-        }
+        conferirCodigo(token, codigo);
 
         // Marca o token como usado
         token.setUsado(true);
@@ -856,6 +803,61 @@ public class AuthService {
     }
 
     /**
+     * Confere o código digitado. Cada erro conta uma tentativa e, depois de
+     * {@link VerificationToken#MAX_TENTATIVAS}, o código deixa de valer: sem isso os
+     * 6 dígitos podiam ser descobertos por força bruta dentro da validade.
+     */
+    private void conferirCodigo(VerificationToken token, String codigo) {
+        if (token.isExpirado()) {
+            throw new CodigoVerificacaoInvalidoException(
+                    "Código expirado. Solicite um novo código.",
+                    "Código expirado"
+            );
+        }
+
+        if (token.getUsado()) {
+            throw new CodigoVerificacaoInvalidoException(
+                    "Código já foi utilizado. Solicite um novo código.",
+                    "Código já utilizado"
+            );
+        }
+
+        if (token.isBloqueado()) {
+            throw new CodigoVerificacaoInvalidoException(
+                    "Muitas tentativas incorretas. Solicite um novo código.",
+                    "Muitas tentativas"
+            );
+        }
+
+        if (!token.getCodigo().equals(codigo)) {
+            token.setTentativas(token.getTentativas() + 1);
+            verificationTokenRepository.save(token);
+            if (token.isBloqueado()) {
+                throw new CodigoVerificacaoInvalidoException(
+                        "Muitas tentativas incorretas. Solicite um novo código.",
+                        "Muitas tentativas"
+                );
+            }
+            throw new CodigoVerificacaoInvalidoException(
+                    "Código inválido.",
+                    "Código inválido"
+            );
+        }
+    }
+
+    /** Evita disparar vários e-mails seguidos (e trocar de código sem parar para tentar de novo). */
+    private void garantirIntervaloEntreCodigos(String email, VerificationToken.TipoToken tipo) {
+        verificationTokenRepository.findLatestByEmailAndTipo(email, tipo).ifPresent(anterior -> {
+            long espera = INTERVALO_ENTRE_CODIGOS.minus(
+                    Duration.between(anterior.getCriadoEm(), LocalDateTime.now())).getSeconds();
+            if (espera > 0) {
+                throw new RegraDeNegocioException(
+                        "Aguarde " + espera + " segundos para pedir um novo código.");
+            }
+        });
+    }
+
+    /**
      * Gera código aleatório de 6 dígitos
      */
     private String gerarCodigoAleatorio() {
@@ -868,9 +870,9 @@ public class AuthService {
      * Cria um VerificationToken
      */
     private VerificationToken criarVerificationToken(String email, String codigo,
-                                                     VerificationToken.TipoToken tipo, int horasValidade) {
+                                                     VerificationToken.TipoToken tipo, Duration validade) {
         LocalDateTime agora = LocalDateTime.now();
-        LocalDateTime expiracao = agora.plusHours(horasValidade);
+        LocalDateTime expiracao = agora.plus(validade);
 
         return VerificationToken.builder()
                 .codigo(codigo)
@@ -880,48 +882,6 @@ public class AuthService {
                 .criadoEm(agora)
                 .expiraEm(expiracao)
                 .usado(false)
-                .build();
-    }
-
-    /**
-     * Atualiza o método registrar para NÃO enviar email de boas-vindas imediatamente
-     * (enviará apenas após verificação)
-     */
-    @Transactional
-    public AuthResponseDTO registrarComVerificacao(RegistroRequestDTO registroRequest) {
-        if (usuarioRepository.existsByEmail(registroRequest.getEmail())) {
-            throw new RegraDeNegocioException("Email já está em uso");
-        }
-
-        Usuario usuario = Usuario.builder()
-                .nome(registroRequest.getNome())
-                .sobrenome(registroRequest.getSobrenome())
-                .email(registroRequest.getEmail())
-                .senha(passwordEncoder.encode(registroRequest.getSenha()))
-                .telefone(registroRequest.getTelefone())
-                .dataNascimento(registroRequest.getDataNascimento())
-                .genero(registroRequest.getGenero())
-                .fotoPerfil(registroRequest.getFotoPerfil())
-                .role(Role.USER)
-                .ativo(true)
-                .emailVerificado(false) // Precisa verificar
-                .provider(AuthProvider.LOCAL)
-                .build();
-
-        usuario = usuarioRepository.save(usuario);
-
-        // Envia código de verificação
-        enviarCodigoVerificacao(usuario.getEmail());
-
-        // Gera token com as authorities corretas do usuário
-        String token = generateTokenForUser(usuario);
-
-        UsuarioDTO usuarioDTO = usuarioMapper.toDTO(usuario);
-
-        return AuthResponseDTO.builder()
-                .token(token)
-                .tipo("Bearer")
-                .usuario(usuarioDTO)
                 .build();
     }
 }

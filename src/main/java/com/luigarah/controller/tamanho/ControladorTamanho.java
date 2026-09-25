@@ -3,6 +3,7 @@ package com.luigarah.controller.tamanho;
 import com.luigarah.controller.doc.TamanhoControllerDoc;
 import com.luigarah.dto.produto.RespostaProdutoDTO;
 import com.luigarah.service.tamanho.ServicoTamanho;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/tamanhos")
@@ -44,6 +46,38 @@ public class ControladorTamanho implements TamanhoControllerDoc {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(RespostaProdutoDTO.erro("Erro ao listar catálogo: " + e.getMessage()));
+        }
+    }
+
+    // vários produtos de uma vez (listagens)
+    @GetMapping("/produtos")
+    @Operation(
+            summary = "Tamanhos de vários produtos",
+            description = "Devolve { produtoId: [etiquetas] } numa única consulta, para ?ids=1,2,3 "
+                    + "ou para todos os produtos de ?categoria=roupas. Com comEstoque=true, só tamanhos "
+                    + "com estoque. Na busca por ids, produtos sem tamanho (bolsas) vêm com lista vazia."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Tamanhos por produto."),
+            @ApiResponse(responseCode = "400", description = "Sem ids nem categoria, categoria inválida ou mais de 500 produtos.")
+    })
+    public ResponseEntity<RespostaProdutoDTO<Map<Long, List<String>>>> listarTamanhosDosProdutos(
+            @RequestParam(required = false) List<Long> ids,
+            @RequestParam(required = false) String categoria,
+            @RequestParam(defaultValue = "false") boolean comEstoque
+    ) {
+        try {
+            Map<Long, List<String>> tamanhos;
+            if (ids != null && !ids.isEmpty()) {
+                tamanhos = servico.listarTamanhosDosProdutos(ids, comEstoque);
+            } else if (categoria != null) {
+                tamanhos = servico.listarTamanhosDaCategoria(categoria.toLowerCase(), comEstoque);
+            } else {
+                throw new IllegalArgumentException("Informe ids ou categoria");
+            }
+            return ResponseEntity.ok(RespostaProdutoDTO.sucesso(tamanhos, "Tamanhos listados com sucesso"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(RespostaProdutoDTO.erro(e.getMessage()));
         }
     }
 

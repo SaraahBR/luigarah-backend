@@ -1,9 +1,11 @@
 package com.luigarah.controller.produto;
 
+import lombok.extern.slf4j.Slf4j;
 import com.luigarah.controller.doc.ProdutoControllerDoc;
 import com.luigarah.dto.produto.ProdutoCreateDTO;
 import com.luigarah.dto.produto.ProdutoDTO;
 import com.luigarah.dto.produto.RespostaProdutoDTO;
+import com.luigarah.mapper.identidade.IdentidadeMapper;
 import com.luigarah.mapper.produto.ProdutoMapper;
 import com.luigarah.model.produto.Produto;
 import com.luigarah.repository.produto.RepositorioProduto;
@@ -49,6 +51,7 @@ import java.util.stream.Collectors;
  *    diretamente aqui por simplicidade/performance (SQL nativa). Se preferir manter
  *    100% via serviço, basta expor no {@link ServicoProduto} um método que delegue ao repositório.
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/produtos")
 public class ControladorProduto implements ProdutoControllerDoc {
@@ -58,6 +61,9 @@ public class ControladorProduto implements ProdutoControllerDoc {
 
     @Autowired
     private RepositorioProduto repositorioProduto; // ✅ usado no catálogo de tamanhos
+
+    @Autowired
+    private IdentidadeMapper identidadeMapper;
 
     // ======================================================================
     // LISTAGEM SIMPLES (sem paginação explícita)
@@ -507,10 +513,6 @@ public class ControladorProduto implements ProdutoControllerDoc {
 
         try {
             // 🔍 Log do payload recebido
-            System.out.println("🔍 [Controller] PUT /api/produtos/" + id);
-            System.out.println("📥 [Controller] DTO recebido - Destaques: " + produtoDTO.getDestaques());
-            System.out.println("📥 [Controller] DTO recebido - Imagens: " + produtoDTO.getImagens());
-            System.out.println("📥 [Controller] DTO recebido - Titulo: " + produtoDTO.getTitulo());
 
             if (!servicoProduto.produtoExiste(id)) {
                 RespostaProdutoDTO<ProdutoDTO> resposta = RespostaProdutoDTO.erro(
@@ -522,14 +524,8 @@ public class ControladorProduto implements ProdutoControllerDoc {
             Produto produto = converterParaEntidade(produtoDTO);
             produto.setId(id);
 
-            System.out.println("🔄 [Controller] Entidade convertida - Destaques: " + produto.getDestaques());
-            System.out.println("🔄 [Controller] Entidade convertida - Imagens: " + produto.getImagens());
-
             Produto produtoAtualizado = servicoProduto.atualizarProduto(id, produto);
             ProdutoDTO produtoAtualizadoDTO = converterParaDTO(produtoAtualizado);
-
-            System.out.println("✅ [Controller] Produto atualizado - Destaques: " + produtoAtualizadoDTO.getDestaques());
-            System.out.println("✅ [Controller] Produto atualizado - Imagens: " + produtoAtualizadoDTO.getImagens());
 
             RespostaProdutoDTO<ProdutoDTO> resposta = RespostaProdutoDTO.sucesso(
                     produtoAtualizadoDTO, "Produto atualizado com sucesso"
@@ -538,8 +534,7 @@ public class ControladorProduto implements ProdutoControllerDoc {
             return ResponseEntity.ok(resposta);
 
         } catch (Exception e) {
-            System.err.println("❌ [Controller] Erro ao atualizar produto: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Erro ao atualizar produto {}", id, e);
             RespostaProdutoDTO<ProdutoDTO> resposta = RespostaProdutoDTO.erro(
                     "Erro ao atualizar produto: " + e.getMessage()
             );
@@ -731,6 +726,11 @@ public class ControladorProduto implements ProdutoControllerDoc {
         BeanUtils.copyProperties(produto, dto);
         // padraoTamanho (entidade) -> padrao (DTO): nomes diferentes, o copyProperties não copia
         dto.setPadrao(produto.getPadraoTamanho());
+        // identidade (entidade) -> IdentidadeDTO: tipos diferentes, o copyProperties também não copia.
+        // Vindo na listagem, o frontend separa mulher/homem/unissex/infantil sem outra requisição.
+        if (produto.getIdentidade() != null) {
+            dto.setIdentidade(identidadeMapper.toDTO(produto.getIdentidade()));
+        }
         dto.setImagens(JsonStringCleaner.clean(dto.getImagens()));
         dto.setDestaques(JsonStringCleaner.clean(dto.getDestaques()));
         dto.setModelo(JsonStringCleaner.clean(dto.getModelo()));

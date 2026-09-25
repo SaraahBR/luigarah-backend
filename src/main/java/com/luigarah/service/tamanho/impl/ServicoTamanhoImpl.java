@@ -7,7 +7,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Transactional
@@ -38,6 +41,45 @@ public class ServicoTamanhoImpl implements ServicoTamanho {
     @Transactional(readOnly = true)
     public List<String> listarTamanhosDoProduto(Long produtoId) {
         return repo.listarEtiquetasPorProduto(produtoId);
+    }
+
+    /** Limite de produtos por consulta, para a URL e o IN (...) não crescerem sem controle. */
+    private static final int MAX_PRODUTOS_POR_CONSULTA = 500;
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, List<String>> listarTamanhosDosProdutos(List<Long> produtoIds, boolean somenteComEstoque) {
+        Map<Long, List<String>> resultado = new LinkedHashMap<>();
+        if (produtoIds == null || produtoIds.isEmpty()) return resultado;
+
+        List<Long> ids = new ArrayList<>(new LinkedHashSet<>(produtoIds));
+        if (ids.size() > MAX_PRODUTOS_POR_CONSULTA) {
+            throw new IllegalArgumentException("Informe no máximo " + MAX_PRODUTOS_POR_CONSULTA + " produtos por consulta");
+        }
+
+        // produtos sem tamanho (ex.: bolsas) também aparecem, com lista vazia
+        ids.forEach(id -> resultado.put(id, new ArrayList<>()));
+        agrupar(repo.listarEtiquetasPorProdutos(ids, somenteComEstoque), resultado);
+        return resultado;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, List<String>> listarTamanhosDaCategoria(String categoria, boolean somenteComEstoque) {
+        if (categoria == null || !categoria.matches("bolsas|roupas|sapatos")) {
+            throw new IllegalArgumentException("Categoria inválida. Use: bolsas, roupas ou sapatos");
+        }
+        Map<Long, List<String>> resultado = new LinkedHashMap<>();
+        agrupar(repo.listarEtiquetasPorCategoria(categoria, somenteComEstoque), resultado);
+        return resultado;
+    }
+
+    /** Junta as linhas [produto_id, etiqueta] por produto, mantendo a ordem da consulta. */
+    private static void agrupar(List<Object[]> linhas, Map<Long, List<String>> resultado) {
+        for (Object[] linha : linhas) {
+            Long produtoId = ((Number) linha[0]).longValue();
+            resultado.computeIfAbsent(produtoId, id -> new ArrayList<>()).add((String) linha[1]);
+        }
     }
 
     @Override

@@ -43,6 +43,14 @@ public class VerificationToken {
     @Column
     private LocalDateTime usadoEm;
 
+    /** Códigos errados digitados para este token (migration V8). */
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer tentativas = 0;
+
+    /** Depois de tantos erros o código deixa de valer (evita força bruta nos 6 dígitos). */
+    public static final int MAX_TENTATIVAS = 5;
+
     public enum TipoToken {
         VERIFICACAO_EMAIL,
         RESET_SENHA
@@ -53,7 +61,11 @@ public class VerificationToken {
     }
 
     public boolean isValido() {
-        return !usado && !isExpirado();
+        return !usado && !isExpirado() && !isBloqueado();
+    }
+
+    public boolean isBloqueado() {
+        return tentativas != null && tentativas >= MAX_TENTATIVAS;
     }
 }
 

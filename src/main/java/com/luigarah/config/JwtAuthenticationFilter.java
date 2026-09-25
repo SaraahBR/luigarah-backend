@@ -16,6 +16,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 /**
  * Filtro JWT que intercepta todas as requisições e valida o token.
@@ -28,49 +29,51 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenProvider tokenProvider;
     private final UserDetailsService userDetailsService;
 
+    /**
+     * Leituras públicas do catálogo não precisam do usuário: sem este atalho, cada GET
+     * de produto de quem está logado ia ao banco buscar a conta (Render/Oregon ->
+     * Supabase/São Paulo) antes mesmo de chegar ao cache do catálogo.
+     */
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String metodo = request.getMethod();
+        if ("OPTIONS".equalsIgnoreCase(metodo)) return true; // preflight CORS
+        if (!"GET".equalsIgnoreCase(metodo) && !"HEAD".equalsIgnoreCase(metodo)) return false;
+        String caminho = request.getRequestURI().substring(request.getContextPath().length());
+        return Arrays.stream(SecurityConfig.CATALOGO)
+                .map(p -> p.substring(0, p.length() - "/**".length()))
+                .anyMatch(p -> caminho.equals(p) || caminho.startsWith(p + "/"));
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-
-        // ✅ CORREÇÃO CRÍTICA: Permitir requisições OPTIONS (CORS preflight) sem autenticação
-        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
-            log.debug("Requisição OPTIONS detectada - pulando validação JWT para URI: {}", request.getRequestURI());
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         try {
             String jwt = getJwtFromRequest(request);
 
             if (StringUtils.hasText(jwt)) {
-                log.debug("Token JWT encontrado para URI: {}", request.getRequestURI());
-
                 if (tokenProvider.validateToken(jwt)) {
                     String username = tokenProvider.getUsernameFromToken(jwt);
                     UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                    log.info("=== JWT FILTER - AUTENTICAÇÃO VÁLIDA ===");
-                    log.info("Request URI: {}", request.getRequestURI());
-                    log.info("Usuário: {}", username);
-                    log.info("Authorities: {}", userDetails.getAuthorities());
-
-                    UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                    log.info("Authentication setado com sucesso");
-                    log.info("==========================================");
+                    // Conta desativada pelo admin perde o acesso na hora, não só quando o token expira
+                    if (userDetails.isEnabled() && userDetails.isAccountNonLocked()) {
+                        UsernamePasswordAuthenticationToken authentication =
+                                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                        log.debug("JWT válido: {} {} ({})", request.getMethod(), request.getRequestURI(),
+                                userDetails.getAuthorities());
+                    } else {
+                        log.info("JWT de conta desativada recusado: {} {}", request.getMethod(), request.getRequestURI());
+                    }
                 } else {
-                    log.error("Token JWT INVÁLIDO para URI: {} - Token será rejeitado", request.getRequestURI());
-                    log.error("Token fornecido: {}", jwt.substring(0, Math.min(20, jwt.length())) + "...");
+                    log.debug("JWT inválido ou expirado: {} {}", request.getMethod(), request.getRequestURI());
                 }
-            } else {
-                log.debug("Nenhum token JWT fornecido para URI: {}", request.getRequestURI());
             }
         } catch (Exception ex) {
-            log.error("Erro ao processar autenticação JWT para URI: {}", request.getRequestURI(), ex);
+            log.warn("Erro ao processar JWT em {}: {}", request.getRequestURI(), ex.getMessage());
         }
 
         filterChain.doFilter(request, response);

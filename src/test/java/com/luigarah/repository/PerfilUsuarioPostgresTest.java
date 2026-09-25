@@ -10,6 +10,7 @@ import com.luigarah.model.autenticacao.Usuario;
 import com.luigarah.repository.autenticacao.UsuarioRepository;
 import com.luigarah.service.autenticacao.AuthService;
 import com.luigarah.service.autenticacao.EmailService;
+import com.luigarah.service.autenticacao.VerificadorTokenOAuth;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.DisplayName;
@@ -41,6 +42,7 @@ class PerfilUsuarioPostgresTest {
     @MockBean JwtTokenProvider tokenProvider;
     @MockBean AuthenticationManager authenticationManager;
     @MockBean EmailService emailService;
+    @MockBean VerificadorTokenOAuth verificadorTokenOAuth;
 
     @Autowired AuthService authService;
     @Autowired UsuarioRepository repoUsuario;

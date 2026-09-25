@@ -14,12 +14,16 @@ import lombok.*;
 public class OAuthSyncRequest {
 
     @NotBlank(message = "Provider é obrigatório")
-    @Schema(description = "Provedor OAuth", example = "google", allowableValues = {"google", "facebook", "github"})
+    @Schema(description = "Provedor OAuth", example = "google", allowableValues = {"google", "facebook"})
     private String provider;
 
-    @NotBlank(message = "Email é obrigatório")
+    @NotBlank(message = "Token do provedor é obrigatório")
+    @Schema(description = "Token do login social, conferido no provedor: id_token (Google) ou access_token (Facebook)")
+    private String token;
+
     @Email(message = "Email inválido")
-    @Schema(description = "Email do usuário", example = "usuario@gmail.com")
+    @Schema(description = "Email informado pelo frontend (apenas informativo: vale o e-mail confirmado pelo provedor)",
+            example = "usuario@gmail.com")
     private String email;
 
     @NotBlank(message = "Nome é obrigatório")

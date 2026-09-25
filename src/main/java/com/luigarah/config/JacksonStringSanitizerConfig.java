@@ -1,6 +1,7 @@
 package com.luigarah.config;
 
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.deser.std.StdScalarDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -33,6 +34,12 @@ public class JacksonStringSanitizerConfig {
         public SanitizingStringDeserializer() { super(String.class); }
         @Override
         public String deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+            // Array ou objeto num campo String (ex.: "imagens": [...], como o próprio GET devolve):
+            // guarda o JSON como texto, que é o formato salvo no banco. Antes o parser não
+            // consumia o array e os campos seguintes do corpo eram descartados em silêncio.
+            if (p.currentToken() == JsonToken.START_ARRAY || p.currentToken() == JsonToken.START_OBJECT) {
+                return p.readValueAsTree().toString();
+            }
             // Usa teu util — remove CR/LF e faz trim
             return JsonStringCleaner.clean(p.getValueAsString());
         }

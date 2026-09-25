@@ -68,8 +68,9 @@ public class ConfiguracaoCors implements WebMvcConfigurer {
         // Usar HashSet para eliminar duplicatas automaticamente
         Set<String> origens = new HashSet<>(Arrays.asList(origensPermitidas.split(",")));
 
-        // Adicionar wildcards para Vercel (preview deployments)
-        origens.add("https://*.vercel.app");
+        // Previews do próprio projeto na Vercel (luigarah-git-<branch>-...vercel.app).
+        // Antes era qualquer *.vercel.app, ou seja, o site de qualquer pessoa.
+        origens.add("https://luigarah*.vercel.app");
 
         // Adicionar localhost alternativo
         origens.add("http://localhost:3001");

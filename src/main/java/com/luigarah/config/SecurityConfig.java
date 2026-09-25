@@ -29,6 +29,19 @@ import org.springframework.web.cors.CorsConfigurationSource;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    /**
+     * Rotas do catálogo: leitura pública, qualquer escrita (POST, PUT, PATCH, DELETE)
+     * só para ADMIN. PATCH e /api/padroes-tamanho ficavam de fora e qualquer conta
+     * logada conseguia mudar estoque, tamanhos e padrão de tamanho dos produtos.
+     */
+    static final String[] CATALOGO = {
+            "/api/produtos/**",
+            "/api/identidades/**",
+            "/api/tamanhos/**",
+            "/api/padroes-tamanho/**",
+            "/api/estoque/**",
+    };
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final UserDetailsService userDetailsService;
     private final CorsConfigurationSource fonteCorsConfiguration; // ✅ INJETANDO CORS
@@ -103,25 +116,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/search/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/search/**").permitAll()
 
-                        // 🔒 PRODUTOS - Escrita apenas ADMIN
-                        .requestMatchers(HttpMethod.POST, "/api/produtos/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/produtos/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/produtos/**").hasRole("ADMIN")
-
-                        // 🔒 IDENTIDADES - Escrita apenas ADMIN
-                        .requestMatchers(HttpMethod.POST, "/api/identidades/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/identidades/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/identidades/**").hasRole("ADMIN")
-
-                        // 🔒 TAMANHOS - Escrita apenas ADMIN
-                        .requestMatchers(HttpMethod.POST, "/api/tamanhos/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/tamanhos/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/tamanhos/**").hasRole("ADMIN")
-
-                        // 🔒 ESTOQUE - Escrita apenas ADMIN
-                        .requestMatchers(HttpMethod.POST, "/api/estoque/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/estoque/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/estoque/**").hasRole("ADMIN")
+                        // 🔒 CATÁLOGO (produtos, identidades, tamanhos, padrões, estoque) - Escrita apenas ADMIN
+                        .requestMatchers(HttpMethod.POST, CATALOGO).hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, CATALOGO).hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, CATALOGO).hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, CATALOGO).hasRole("ADMIN")
 
                         // 🔒 CARRINHO - Apenas usuários autenticados
                         .requestMatchers("/api/carrinho/**").authenticated()

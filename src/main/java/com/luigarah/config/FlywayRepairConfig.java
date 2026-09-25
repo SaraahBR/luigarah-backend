@@ -1,11 +1,13 @@
 package com.luigarah.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.flywaydb.core.Flyway;
 import org.springframework.boot.autoconfigure.flyway.FlywayMigrationStrategy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
+@Slf4j
 @Configuration
 @Profile("prod") // só vale no profile prod
 public class FlywayRepairConfig {
@@ -20,9 +22,9 @@ public class FlywayRepairConfig {
                 flyway.migrate();
             } catch (Exception e) {
                 // Se falhou a validação, faz repair automático
-                System.out.println("⚠️ Flyway validation failed. Running repair...");
+                log.warn("⚠️ Flyway validation failed. Running repair...");
                 flyway.repair();
-                System.out.println("✅ Flyway repair completed. Running migration...");
+                log.info("✅ Flyway repair completed. Running migration...");
                 flyway.migrate();
             }
         };

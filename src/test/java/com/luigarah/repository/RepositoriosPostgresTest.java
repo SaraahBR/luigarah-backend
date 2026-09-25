@@ -45,10 +45,11 @@ import static org.junit.jupiter.api.Assertions.*;
 @DataJpaTest(properties = "spring.jpa.hibernate.ddl-auto=validate")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import(RepositoriosPostgresTest.PostgresEmbarcadoConfig.class)
-class RepositoriosPostgresTest {
+public class RepositoriosPostgresTest {
 
+    /** PostgreSQL embarcado; também usado pelo teste de segurança da API. */
     @TestConfiguration
-    static class PostgresEmbarcadoConfig {
+    public static class PostgresEmbarcadoConfig {
 
         @Bean(destroyMethod = "close")
         EmbeddedPostgres embeddedPostgres() throws IOException {
@@ -200,6 +201,45 @@ class RepositoriosPostgresTest {
         assertEquals(1, repoProduto.removerTamanho(ROUPA_BR_ID, "PP"));
         repoProduto.inserirTamanho(ROUPA_BR_ID, "PP", 10);
         assertTrue(repoProduto.listarEtiquetasPorProduto(ROUPA_BR_ID).contains("PP"));
+    }
+
+    @Test
+    @DisplayName("Deve listar os tamanhos de vários produtos numa consulta, na mesma ordem da consulta individual")
+    void deveListarTamanhosDeVariosProdutos() {
+        List<Object[]> linhas = repoProduto.listarEtiquetasPorProdutos(List.of(ROUPA_BR_ID, BOLSA_ID), false);
+
+        List<String> daRoupa = linhas.stream()
+                .filter(l -> ((Number) l[0]).longValue() == ROUPA_BR_ID)
+                .map(l -> (String) l[1])
+                .toList();
+        assertEquals(repoProduto.listarEtiquetasPorProduto(ROUPA_BR_ID), daRoupa);
+        // bolsa não tem tamanho: não aparece nas linhas
+        assertTrue(linhas.stream().noneMatch(l -> ((Number) l[0]).longValue() == BOLSA_ID));
+    }
+
+    @Test
+    @DisplayName("Tamanhos por categoria com estoque seguem a mesma regra do filtro por tamanho")
+    void deveListarTamanhosDaCategoriaComEstoque() {
+        // zera um tamanho da roupa: some da lista com estoque, continua na lista completa
+        repoProduto.upsertEstoquePorEtiqueta(ROUPA_BR_ID, "PP", 0);
+
+        List<String> comEstoque = repoProduto.listarEtiquetasPorCategoria("roupas", true).stream()
+                .filter(l -> ((Number) l[0]).longValue() == ROUPA_BR_ID)
+                .map(l -> (String) l[1])
+                .toList();
+        List<String> todos = repoProduto.listarEtiquetasPorCategoria("roupas", false).stream()
+                .filter(l -> ((Number) l[0]).longValue() == ROUPA_BR_ID)
+                .map(l -> (String) l[1])
+                .toList();
+
+        assertFalse(comEstoque.contains("PP"));
+        assertTrue(todos.contains("PP"));
+        // o filtro antigo (categoria + tamanho) concorda: produto sem estoque em PP não aparece
+        assertTrue(repoProduto.buscarPorCategoriaETamanho("roupas", "PP", PageRequest.of(0, 200))
+                .stream().noneMatch(p -> p.getId() == ROUPA_BR_ID));
+        // só a categoria pedida
+        assertTrue(repoProduto.listarEtiquetasPorCategoria("sapatos", false).stream()
+                .noneMatch(l -> ((Number) l[0]).longValue() == ROUPA_BR_ID));
     }
 
     // ---------------------------------------------------------------------

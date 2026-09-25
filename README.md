@@ -1,7 +1,7 @@
 # 🛍️ Luigarah Backend - API RESTful
 
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://adoptium.net/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.0-green.svg)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.12-green.svg)](https://spring.io/projects/spring-boot)
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E.svg)](https://supabase.com/)
 [![Cloudflare R2](https://img.shields.io/badge/Cloudflare-R2-orange.svg)](https://www.cloudflare.com/products/r2/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -275,10 +275,10 @@ Todos os e-mails seguem um design HTML responsivo e moderno:
 
 | Framework | Versão | Função |
 |-----------|--------|--------|
-| **Spring Boot** | 3.2.0 | Framework base da aplicação |
-| **Spring Web** | 3.2.0 | API REST e controladores |
-| **Spring Data JPA** | 3.2.0 | Persistência e repositórios |
-| **Spring Security** | 3.2.0 | Autenticação e autorização |
+| **Spring Boot** | 3.2.12 | Framework base da aplicação |
+| **Spring Web** | 3.2.12 | API REST e controladores |
+| **Spring Data JPA** | 3.2.12 | Persistência e repositórios |
+| **Spring Security** | 6.2.8 | Autenticação e autorização |
 | **Spring Validation** | 3.2.0 | Validação de dados (Bean Validation) |
 | **Spring OAuth2 Client** | 3.2.0 | Preparado para OAuth2 (Google/Facebook) |
 | **Spring DevTools** | 3.2.0 | Hot reload em desenvolvimento |
@@ -1299,6 +1299,65 @@ if (file.getSize() > 5 * 1024 * 1024) {
 
 ---
 
+## 🔒 Segurança e Autenticação
+
+### Regras de acesso (`SecurityConfig`)
+
+| Rotas | Leitura (GET) | Escrita (POST, PUT, PATCH, DELETE) |
+|-------|---------------|------------------------------------|
+| `/api/produtos`, `/api/identidades`, `/api/tamanhos`, `/api/padroes-tamanho`, `/api/estoque` | Pública | Somente **ADMIN** |
+| `/api/carrinho`, `/api/lista-desejos`, `/api/usuario` | Usuário logado | Usuário logado (apenas os próprios itens) |
+| `/api/admin/**` | ADMIN | ADMIN |
+| `/api/auth/**` | Pública | Pública (login, cadastro, códigos) |
+
+### Contas e tokens
+
+- **JWT** (HS256, 24 h) no cabeçalho `Authorization: Bearer ...`. Conta desativada pelo admin perde o acesso
+  na hora, mesmo com o token ainda válido.
+- **Cadastro** não devolve token: a conta só é liberada depois de confirmar o e-mail (`/verificar-codigo`).
+- **Códigos de 6 dígitos** (confirmação de e-mail e redefinição de senha):
+  - no máximo **5 tentativas** por código; depois disso é preciso pedir outro (migration `V8`);
+  - intervalo mínimo de **1 minuto** entre pedidos de código para o mesmo e-mail;
+  - validade de **12 horas** para confirmar a conta e **1 hora** para redefinir a senha.
+- **Senha forte** (6–40 caracteres, maiúscula, minúscula, número e caractere especial) no cadastro, na
+  redefinição e na troca de senha.
+
+### Login social (Google/Facebook)
+
+O frontend (NextAuth) envia ao `POST /api/auth/oauth/sync` o token recebido no login, e o backend confere
+esse token **no próprio provedor** (`VerificadorTokenOAuth`) antes de gerar o JWT:
+
+- **Google:** `id_token` validado em `oauth2.googleapis.com/tokeninfo` (emitido para o nosso client id,
+  e-mail verificado).
+- **Facebook:** `access_token` validado em `graph.facebook.com/debug_token` com o app secret (emitido para
+  o nosso app); o e-mail vem da Graph API.
+
+O e-mail usado é sempre o confirmado pelo provedor, nunca o enviado no corpo da requisição.
+
+| Variável | Onde pegar |
+|----------|-----------|
+| `GOOGLE_CLIENT_ID` | Mesmo valor configurado no frontend (Google Cloud Console → Credenciais → OAuth) |
+| `FACEBOOK_CLIENT_ID` | Mesmo valor configurado no frontend (Meta for Developers → App ID) |
+| `FACEBOOK_CLIENT_SECRET` | Mesmo valor configurado no frontend (Meta for Developers → App Secret) |
+
+Sem essas variáveis o login com o provedor correspondente é recusado (o login com e-mail e senha continua
+funcionando).
+
+### Erros
+
+Respostas de erro usam o status HTTP correto (400 dados inválidos, 401 credenciais, 403 acesso negado,
+404 não encontrado, 405 método, 413 arquivo grande). Erros inesperados respondem 500 com uma mensagem
+genérica; o detalhe fica só no log.
+
+### 🧪 Testes
+
+`SegurancaApiTest` sobe a aplicação inteira sobre o PostgreSQL embarcado e confere pela API: escrita no
+catálogo só para ADMIN, cadastro sem token, conta desativada, login social com e-mail do provedor, limite de
+tentativas e intervalo dos códigos e os status de erro. `VerificadorTokenOAuthTest` cobre as regras de
+aceitação dos tokens do Google e do Facebook.
+
+---
+
 ## 🗄️ Banco de Dados
 
 O banco de dados é o **Supabase (PostgreSQL 17)**, região `sa-east-1` (São Paulo).
@@ -1378,9 +1437,10 @@ mas qualquer acesso pela Data API pública do Supabase é bloqueado.
 | `V5__novos_tamanhos_usa_e_sapatos.sql` | Acrescenta XXL/XXXL (USA) e 30/31 (sapatos) e sorteia esses tamanhos, com estoque de 1 a 15, entre os produtos compatíveis |
 | `V6__preferencias_usuario.sql` | Preferências do usuário (receber novidades e alertas de reposição) |
 | `V7__traducoes_produtos.sql` | Tabela `produto_traducoes` com as traduções dos produtos (en, es, fr) |
+| `V8__tentativas_codigo_verificacao.sql` | Contador de tentativas dos códigos de 6 dígitos (limite de 5) |
 
 > ⚠️ Nunca edite uma migration já aplicada — o Flyway valida o checksum e a aplicação não sobe.
-> Para mudar o banco, crie um novo arquivo `V8__descricao.sql`.
+> Para mudar o banco, crie um novo arquivo `V9__descricao.sql`.
 
 ### 👑 Criando um administrador
 
@@ -1389,6 +1449,31 @@ Cadastre-se normalmente pelo site e promova a conta no **SQL Editor** do Supabas
 ```sql
 UPDATE app_luigarah.usuarios SET role = 'ADMIN' WHERE email = 'seu@email.com';
 ```
+
+### ⚡ Desempenho e cache do catálogo
+
+O backend roda no Render em **Oregon (EUA)** e o banco no Supabase em **São Paulo**: cada consulta SQL
+atravessa o continente (~180 ms ida e volta). Para as páginas não dependerem disso:
+
+- **Cache de respostas** (`cache/CacheCatalogoFilter` + `CacheRespostasCatalogo`, com Caffeine): as leituras
+  públicas de `/api/produtos`, `/api/estoque`, `/api/tamanhos`, `/api/padroes-tamanho` e `/api/identidades`
+  ficam em memória, separadas por URL e `Accept-Language`. O cabeçalho `X-Cache: HIT/MISS` mostra de onde veio.
+- **Sempre atualizado:** qualquer `POST/PUT/PATCH/DELETE` nessas rotas (painel admin) e cada tradução nova
+  limpam o cache. Alterações feitas direto no banco (SQL Editor) aparecem em até 30 minutos.
+- **Aquecimento** (`cache/AquecimentoCacheCatalogo`): a cada 30 s o próprio servidor pede, em segundo plano, as
+  rotas que o site usa ao abrir as páginas (listas por categoria, identidades e filtros de tamanho, nos 4 idiomas)
+  que não estiverem no cache. Assim nem o primeiro visitante depois de um deploy ou de uma edição espera o banco.
+- **JWT fora das leituras públicas:** o filtro JWT não roda nos GETs do catálogo, que não dependem do usuário;
+  antes, cada leitura de quem estava logado buscava a conta no banco antes de chegar ao cache.
+- **Menos idas ao banco:** `hibernate.default_batch_fetch_size=50` carrega as identidades dos produtos em lote.
+- **Tamanhos em lote:** `GET /api/tamanhos/produtos?ids=1,2,3` ou `?categoria=roupas&comEstoque=true` devolve
+  `{ produtoId: [etiquetas] }` numa consulta só (as listagens faziam uma requisição por produto ou por tamanho).
+- **Identidade na listagem:** os produtos de `/api/produtos` agora trazem o objeto `identidade`.
+
+| Variável | Padrão | Uso |
+|----------|--------|-----|
+| `CACHE_CATALOGO_HABILITADO` | `true` | Liga/desliga o cache |
+| `CACHE_CATALOGO_TTL_MINUTOS` | `30` | Tempo máximo de uma resposta em cache |
 
 ### 🧪 Testes do banco
 

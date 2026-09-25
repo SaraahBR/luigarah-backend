@@ -2,16 +2,24 @@ package com.luigarah.exception;
 
 import com.luigarah.dto.error.ErrorResponseDTO;
 import com.luigarah.dto.produto.RespostaProdutoDTO;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,6 +29,7 @@ import java.util.Map;
  * Não precisa adicionar headers manualmente, o CorsFilter já faz isso automaticamente
  */
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ProductNotFoundException.class)
@@ -169,17 +178,64 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(resposta);
     }
 
+    // ------------------------------------------------------------------
+    // Erros da requisição: sem estes handlers, todos caíam no genérico e viravam 500
+    // ------------------------------------------------------------------
+
+    /** @PreAuthorize negado (ex.: usuário comum em rota de admin). */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<RespostaProdutoDTO<Object>> tratarAcessoNegado(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(RespostaProdutoDTO.erro("Acesso negado"));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<RespostaProdutoDTO<Object>> tratarRotaInexistente(NoResourceFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(RespostaProdutoDTO.erro("Recurso não encontrado"));
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<RespostaProdutoDTO<Object>> tratarMetodoNaoSuportado(HttpRequestMethodNotSupportedException ex) {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .body(RespostaProdutoDTO.erro("Método " + ex.getMethod() + " não suportado nesta rota"));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<RespostaProdutoDTO<Object>> tratarCorpoInvalido(HttpMessageNotReadableException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(RespostaProdutoDTO.erro("Corpo da requisição inválido"));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<RespostaProdutoDTO<Object>> tratarTipoInvalido(MethodArgumentTypeMismatchException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(RespostaProdutoDTO.erro("Valor inválido para o parâmetro '" + ex.getName() + "'"));
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<RespostaProdutoDTO<Object>> tratarParametroFaltando(MissingServletRequestParameterException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(RespostaProdutoDTO.erro("Parâmetro obrigatório ausente: " + ex.getParameterName()));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<RespostaProdutoDTO<Object>> tratarArquivoGrande(MaxUploadSizeExceededException ex) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(RespostaProdutoDTO.erro("Arquivo muito grande. Tamanho máximo: 5MB"));
+    }
+
+    /**
+     * Erro inesperado: o detalhe vai para o log, não para a resposta (a mensagem
+     * interna podia expor SQL, nomes de classes e dados do banco).
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<RespostaProdutoDTO<Object>> tratarExcecaoGeral(
             Exception ex, WebRequest request) {
 
-        // Log detalhado do erro para debug
-        ex.printStackTrace();
+        log.error("Erro inesperado em {}", request.getDescription(false), ex);
 
-        RespostaProdutoDTO<Object> resposta = RespostaProdutoDTO.erro(
-                "Erro interno do servidor: " + ex.getMessage()
-        );
-
+        RespostaProdutoDTO<Object> resposta = RespostaProdutoDTO.erro("Erro interno do servidor");
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(resposta);
     }
 }

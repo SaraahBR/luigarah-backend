@@ -99,14 +99,7 @@ public class ControladorAutenticacao {
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         try {
-            System.out.println("📝 Atualizando perfil do usuário: " + userDetails.getUsername());
-            System.out.println("📥 Dados recebidos: nome=" + request.getNome() +
-                             ", sobrenome=" + request.getSobrenome() +
-                             ", telefone=" + request.getTelefone());
-
             UsuarioDTO usuario = authService.atualizarPerfilComJWT(request, userDetails.getUsername());
-
-            System.out.println("✅ Perfil atualizado com sucesso!");
 
             return ResponseEntity.ok(
                 Map.of(
@@ -117,7 +110,6 @@ public class ControladorAutenticacao {
             );
 
         } catch (Exception e) {
-            System.err.println("❌ Erro ao atualizar perfil: " + e.getMessage());
             log.error("Erro ao atualizar perfil", e);
 
             return ResponseEntity.status(500).body(
@@ -184,8 +176,6 @@ public class ControladorAutenticacao {
                 );
             }
 
-            System.out.println("📸 Atualizando foto de perfil do usuário: " + userDetails.getUsername());
-
             UsuarioDTO usuario = authService.atualizarFotoPerfil(fotoUrl, userDetails.getUsername());
 
             return ResponseEntity.ok(
@@ -196,7 +186,6 @@ public class ControladorAutenticacao {
                 )
             );
         } catch (Exception e) {
-            System.err.println("❌ Erro ao atualizar foto: " + e.getMessage());
             log.error("Erro ao atualizar foto de perfil", e);
             return ResponseEntity.status(500).body(
                 Map.of("sucesso", false, "mensagem", "Erro ao atualizar foto: " + e.getMessage())
@@ -230,15 +219,12 @@ public class ControladorAutenticacao {
     })
     public ResponseEntity<?> removerFotoPerfil(@AuthenticationPrincipal UserDetails userDetails) {
         try {
-            System.out.println("🗑️ Removendo foto de perfil do usuário: " + userDetails.getUsername());
-
             authService.removerFotoPerfil(userDetails.getUsername());
 
             return ResponseEntity.ok(
                 Map.of("sucesso", true, "mensagem", "Foto removida com sucesso")
             );
         } catch (Exception e) {
-            System.err.println("❌ Erro ao remover foto: " + e.getMessage());
             log.error("Erro ao remover foto de perfil", e);
             return ResponseEntity.status(500).body(
                 Map.of("sucesso", false, "mensagem", "Erro ao remover foto")

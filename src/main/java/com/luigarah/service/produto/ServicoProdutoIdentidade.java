@@ -1,5 +1,6 @@
 package com.luigarah.service.produto;
 
+import com.luigarah.exception.RecursoNaoEncontradoException;
 import com.luigarah.model.identidade.Identidade;
 import com.luigarah.model.produto.Produto;
 import com.luigarah.repository.identidade.RepositorioIdentidade;
@@ -23,10 +24,10 @@ public class ServicoProdutoIdentidade {
     @Transactional
     public Produto atribuirIdentidade(Long produtoId, Long identidadeId) {
         Produto produto = repositorioProduto.findById(produtoId)
-                .orElseThrow(() -> new RuntimeException("Produto não encontrado com ID: " + produtoId));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Produto não encontrado com ID: " + produtoId));
 
         Identidade identidade = repositorioIdentidade.findById(identidadeId)
-                .orElseThrow(() -> new RuntimeException("Identidade não encontrada com ID: " + identidadeId));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Identidade não encontrada com ID: " + identidadeId));
 
         produto.setIdentidade(identidade);
         return repositorioProduto.save(produto);
@@ -38,7 +39,7 @@ public class ServicoProdutoIdentidade {
     @Transactional
     public Produto removerIdentidade(Long produtoId) {
         Produto produto = repositorioProduto.findById(produtoId)
-                .orElseThrow(() -> new RuntimeException("Produto não encontrado com ID: " + produtoId));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Produto não encontrado com ID: " + produtoId));
 
         produto.setIdentidade(null);
         return repositorioProduto.save(produto);
@@ -66,7 +67,7 @@ public class ServicoProdutoIdentidade {
     @Transactional(readOnly = true)
     public List<Produto> buscarProdutosPorIdentidadeId(Long identidadeId) {
         if (!repositorioIdentidade.existsById(identidadeId)) {
-            throw new RuntimeException("Identidade não encontrada com ID: " + identidadeId);
+            throw new RecursoNaoEncontradoException("Identidade não encontrada com ID: " + identidadeId);
         }
         return repositorioProduto.findByIdentidadeId(identidadeId);
     }
@@ -77,7 +78,7 @@ public class ServicoProdutoIdentidade {
     @Transactional(readOnly = true)
     public List<Produto> buscarProdutosPorIdentidadeCodigo(String codigo) {
         Identidade identidade = repositorioIdentidade.findByCodigo(codigo)
-                .orElseThrow(() -> new RuntimeException("Identidade não encontrada com código: " + codigo));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Identidade não encontrada com código: " + codigo));
         return repositorioProduto.findByIdentidadeId(identidade.getId());
     }
 }
