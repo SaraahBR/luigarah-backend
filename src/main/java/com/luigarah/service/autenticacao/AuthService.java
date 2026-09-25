@@ -37,8 +37,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.security.SecureRandom;
 import java.time.Duration;
@@ -46,7 +48,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -63,10 +64,17 @@ public class AuthService {
     private final EnderecoMapper enderecoMapper;
     private final EmailService emailService;
     private final VerificadorTokenOAuth verificadorTokenOAuth;
+    private final TransactionTemplate transacao;
     private final VerificationTokenRepository verificationTokenRepository;
 
-    // Map para controlar locks por email (evita race condition)
-    private final ConcurrentHashMap<String, Object> emailLocks = new ConcurrentHashMap<>();
+    /**
+     * Travas do login social, uma por e-mail (distribuídas em 64 objetos fixos, sem
+     * precisar criar e remover travas). Serializam pedidos simultâneos do mesmo e-mail.
+     */
+    private static final Object[] TRAVAS_OAUTH = new Object[64];
+    static {
+        for (int i = 0; i < TRAVAS_OAUTH.length; i++) TRAVAS_OAUTH[i] = new Object();
+    }
 
     /** Validade do código de confirmação de conta (o e-mail informa 12 horas). */
     static final Duration VALIDADE_VERIFICACAO_EMAIL = Duration.ofHours(12);
@@ -223,23 +231,24 @@ public class AuthService {
      * - Se e-mail existe: vincula OAuth e retorna JWT
      * - Se e-mail não existe: cria conta e retorna JWT
      */
-    @Transactional
     public AuthResponseDTO syncOAuth(OAuthSyncRequest request) {
         VerificadorTokenOAuth.UsuarioOAuth confirmado =
                 verificadorTokenOAuth.verificar(request.getProvider(), request.getToken());
         String email = confirmado.email();
         log.info("Sincronizando conta OAuth - Provider: {}", request.getProvider());
 
-        // Obtém ou cria um lock específico para este email
-        Object lock = emailLocks.computeIfAbsent(email, k -> new Object());
-
-        try {
-            synchronized (lock) {
-                return executeSyncOAuth(request, email, confirmado.providerId());
+        // No primeiro login chegavam dois pedidos juntos: os dois não achavam a conta e
+        // tentavam criá-la, e o segundo falhava com e-mail duplicado. Agora a transação
+        // termina (commit) ainda dentro da trava, então o segundo pedido já encontra a conta.
+        Object trava = TRAVAS_OAUTH[Math.floorMod(email.hashCode(), TRAVAS_OAUTH.length)];
+        synchronized (trava) {
+            try {
+                return transacao.execute(status -> executeSyncOAuth(request, email, confirmado.providerId()));
+            } catch (DataIntegrityViolationException e) {
+                // Outra instância do servidor criou a conta no mesmo instante: agora ela existe
+                log.info("Conta OAuth criada em paralelo; vinculando à existente");
+                return transacao.execute(status -> executeSyncOAuth(request, email, confirmado.providerId()));
             }
-        } finally {
-            // Remove o lock se não houver mais threads aguardando
-            emailLocks.remove(email);
         }
     }
 

@@ -244,6 +244,35 @@ class SegurancaApiTest {
         }
 
         @Test
+        @DisplayName("Dois pedidos simultâneos no primeiro login: os dois entram e só uma conta é criada")
+        void primeiroLoginSimultaneo() throws Exception {
+            String email = novoEmail();
+            when(verificadorTokenOAuth.verificar(eq("google"), eq("token-simultaneo")))
+                    .thenReturn(new VerificadorTokenOAuth.UsuarioOAuth(email, "456"));
+            String corpo = corpo(Map.of("provider", "google", "token", "token-simultaneo",
+                    "email", email, "nome", "Primeiro", "sobrenome", "Login"));
+
+            java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(3);
+            java.util.concurrent.CountDownLatch largada = new java.util.concurrent.CountDownLatch(1);
+            java.util.List<java.util.concurrent.Future<Integer>> pedidos = new java.util.ArrayList<>();
+            for (int i = 0; i < 3; i++) {
+                pedidos.add(pool.submit(() -> {
+                    largada.await();
+                    return mvc.perform(post("/api/auth/oauth/sync").contentType(MediaType.APPLICATION_JSON).content(corpo))
+                            .andReturn().getResponse().getStatus();
+                }));
+            }
+            largada.countDown();
+            for (java.util.concurrent.Future<Integer> pedido : pedidos) {
+                assertEquals(200, pedido.get(30, java.util.concurrent.TimeUnit.SECONDS));
+            }
+            pool.shutdown();
+
+            assertTrue(usuarios.findByEmail(email).isPresent());
+            assertEquals(1, usuarios.findAll().stream().filter(u -> email.equals(u.getEmail())).count());
+        }
+
+        @Test
         @DisplayName("Token recusado pelo provedor não gera JWT")
         void tokenInvalido() throws Exception {
             when(verificadorTokenOAuth.verificar(anyString(), anyString()))
